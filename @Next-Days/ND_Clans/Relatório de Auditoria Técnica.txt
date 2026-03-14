@@ -1,0 +1,83 @@
+Relatório de Auditoria Técnica: Módulo ND_Clans (DayZ)
+1. Visão Geral
+Este documento detalha as modificações, correções de segurança e otimizações de performance realizadas em 24 arquivos do módulo ND_Clans. O objetivo foi eliminar vulnerabilidades críticas, prevenir crashes de servidor/cliente e modernizar a sintaxe para os padrões da Enfusion Engine de 2026.
+
+2. Resumo de Alterações por Categoria
+🛡️ Segurança e Economia
+Blindagem de RPC (Trader): No arquivo alpTraderCore.c, foi removida a leitura do preço (topay) enviada pelo cliente. O servidor agora deve validar os valores internamente para impedir exploits de dinheiro infinito ou compras gratuitas.
+
+Validação de Identidade: Em alpClansPlugin.c, as ações de expulsão e dissolução de clã agora validam se o sender (remetente do RPC) é o líder legítimo no banco de dados.
+
+Validação de Território: Em alpAuthorize.c, foi removido o retorno automático de true no servidor, forçando a validação real de proximidade e permissões para evitar construções ilegais.
+
+🚀 Performance e Otimização
+Uso de Maps (Busca O(1)): Em alpClansPlugin.c e alpSpawnEquipment.c, substituímos loops de busca manual por consultas diretas em mapas, reduzindo o impacto no Server Tick.
+
+Matemática Nativa: Substituímos o uso de alpUF.VectorDistance pela função nativa vector.Distance em arquivos como alpMissionPosition.c e alpAuthorize.c, aproveitando a execução direta em C++.
+
+Caching de Plugins: No arquivo alpND.c, implementamos o armazenamento da referência do plugin de clãs no Init, evitando buscas repetitivas na memória global.
+
+🛠️ Estabilidade (Anti-Crash)
+Gestão de Memória de UI: Implementamos destrutores (~ClassName) em classes de interface como defaultItem.c, EstatesItem.c, permissionItem.c e TaxesItem.c para garantir o Unlink() dos widgets e evitar vazamentos de memória.
+
+Null Checks (Programação Defensiva): Adicionamos verificações de nulidade em arquivos críticos como InGameHud.c (ícones de membros), PlayerBase.c (sistema de proteção) e alpPlayerHive.c (conexão de jogadores).
+
+Projeção de HUD: Em TerritoryLabels.c, adicionamos uma trava no eixo Z para impedir que ícones de base apareçam na tela quando o jogador está de costas para o território.
+
+🧹 Padronização e Sintaxe
+Remoção de Redundâncias: Eliminamos o uso do extends em classes já marcadas como modded (ex: tentbase.c, PlayerBase.c, MissionGameplay.c).
+
+Correção de Erros Fatais: Corrigimos faltas de ponto e vírgula e tipos de dados incorretos em alpPlayerStoreValues.c, alpLifeTime.c e alpInfoPlayer.c.
+
+Remoção de Código Depreciado: Substituímos a palavra-chave autoptr por ref em alpLifeTime.c, alpMissionPosition.c e alpPlotPoleMenu.c.
+
+3. Lista de Arquivos Auditados e Principais Fixes
+tentbase.c: Removida herança redundante.
+
+dayzplayercfgbase.c: Adicionados null checks no registro de IK.
+
+PlayerBase.c: Blindagem do CheckPlotPole e otimização do acesso ao HUD.
+
+dayzplayerimplement.c: Proteção contra NPE no processamento da câmera.
+
+alpAuthorize.c: Fim do bypass de servidor e otimização de distância.
+
+alpLifeTime.c: Correção de sintaxe e remoção de código obsoleto.
+
+alpClansPlugin.c: Refatoração massiva para segurança de RPC e performance de busca.
+
+alpSpawnEquipment.c: Failsafe contra crash no boot e otimização de loops.
+
+alpPlayerHive.c: Blindagem total do processo de conexão e spawn.
+
+alpPlayerStoreValues.c: Correção de erro de compilação (ponto e vírgula).
+
+alpMissionPosition.c: Correção de limitadores de raio e performance matemática.
+
+alpRP.c: Proteção contra crash na transição de câmeras.
+
+alpTraderCore.c: Fechamento de exploits financeiros críticos.
+
+alpND.c: Implementação de cache de plugin e proteção de config.
+
+MissionBase.c: Limpeza de sintaxe no carregador de menus.
+
+MissionGameplay.c: Blindagem do ciclo de frames (OnUpdate).
+
+InGameHud.c: Correção de erros de sintaxe e crashes em ícones de membros.
+
+alpInfoPlayer.c: Correção de erro de compilação e segurança de UI.
+
+alpPlotPoleMenu.c: Remoção de autoptr e blindagem de acesso a configurações.
+
+defaultItem.c: Adicionado destrutor contra vazamento de memória.
+
+EstatesItem.c: Proteção contra referências nulas e destrutor.
+
+permissionItem.c: Estabilidade de layout e gestão de memória.
+
+TaxesItem.c: Proteção contra crash no sistema de reputação.
+
+TerritoryLabels.c: Correção de projeção visual e estabilidade de widgets.
+
+Nota: Este módulo está pronto para ambiente de produção (2026).

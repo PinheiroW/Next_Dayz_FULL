@@ -1,28 +1,31 @@
-modded class DayZPlayerImplement extends DayZPlayer
+modded class DayZPlayerImplement
 {
-	bool 					alp_Is3rdPerson;
+	bool alp_Is3rdPerson;
 	
 	override void HandleView()
 	{	
 		super.HandleView();
 		
-		if ( GetGame().GetWorld().Is3rdPersonDisabled() && ( GetND().GetClans().GetOptions().Enable3rdPersonCameraAtHome || GetND().GetClans().GetOptions().Enable3rdPersonCameraAtSafeZone || GetND().GetClans().GetOptions().Enable3rdPersonCameraInVehicle ) ){
-			m_Camera3rdPerson = alp_Is3rdPerson;				
-		}
-		/*
-		//! 3rd person camera
-		if (GetGame().GetWorld().Is3rdPersonDisabled())
+		// CORREÇÃO 1: Failsafe contra Null Pointer Exception (NPE)
+		// Impede o fechamento do jogo caso o mod core não esteja pronto no frame atual
+		if ( !GetND() || !GetND().GetClans() || !GetND().GetClans().GetOptions() )
+			return;
+
+		// CORREÇÃO 2: Verificação de configurações de mundo e permissões do clã
+		if ( GetGame().GetWorld().Is3rdPersonDisabled() )
 		{
-			m_Camera3rdPerson = false;
+			auto options = GetND().GetClans().GetOptions();
+			
+			// Se 3ª pessoa estiver desabilitada no servidor, permitimos apenas em zonas específicas configuradas
+			if ( options.Enable3rdPersonCameraAtHome || options.Enable3rdPersonCameraAtSafeZone || options.Enable3rdPersonCameraInVehicle )
+			{
+				m_Camera3rdPerson = alp_Is3rdPerson;				
+			}
 		}
-		else if (camChange)
-		{
-			m_Camera3rdPerson = !m_Camera3rdPerson;
-		}
-			*/		
 	}
 	
-	void Set3DcameraALP(bool state){
+	void Set3DcameraALP(bool state)
+	{
 		alp_Is3rdPerson = state;	
 	}	
 }

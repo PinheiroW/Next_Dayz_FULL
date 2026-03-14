@@ -1,46 +1,37 @@
-
 modded class Hologram
 {
-
-
-	
-	
 	override void EvaluateCollision(ItemBase action_item = null)
 	{	
-		EntityAI ent;
-		if (!action_item)
+		// 1. OBRIGATÓRIO: Chamar o comportamento vanilla PRIMEIRO.
+		// Isso garante que o jogo calcule colisões físicas reais (paredes, árvores, inclinação do terreno).
+		super.EvaluateCollision(action_item);
+
+		// 2. Proteções de Null Check para referências críticas do Holograma
+		if (!m_Player || !m_Projection) return;
+
+		EntityAI ent = action_item;
+		if (!ent && m_Player.GetHumanInventory())
 		{
 			ent = m_Player.GetHumanInventory().GetEntityInHands();
 		}
-		else
-		{
-			ent = action_item;
-		}
 		
-		if (ent) 
+		if (ent && ent.IsItemBase()) 
 		{
-
-			bool is_surface_water = IsSurfaceWater( m_Projection.GetPosition() );	
-			if (ent.IsItemBase() )//|| ent.GetType() == "FenceKit" || ent.GetType() == "WatchtowerKit" || ent.GetType() == "alp_PlotPoleKit" || ent.IsContainer() || ent.IsItemTent() )
+			// Verifica se está sobre a água
+			bool is_surface_water = IsSurfaceWater(m_Projection.GetPosition());	
+			
+			// 3. Aplicação de Regras Restritivas (Território/Clã)
+			// Se o jogador NÃO tem permissão OU está tentando colocar na água:
+			if (is_surface_water || !m_Player.IsAuthorized(ItemBase.Cast(ent)))
 			{
-				if( is_surface_water || !m_Player.IsAuthorized(ItemBase.Cast(ent))  )
-				{
-					//Print("PREDMET KOLIDUJE  " + is_surface_water);
-					SetIsColliding( true );
-					return;
-				}
-				else
-				{
-					//Print("PREDMET NEKOLIDUJE a LZE STAVET");
-					SetIsColliding( false );
-					return	
-				}			
+				// Forçamos a colisão para TRUE, impedindo o placement (bloqueia o holograma de ficar verde)
+				SetIsColliding(true);
 			}
-			super.EvaluateCollision(action_item);
+			
+			// NOTA TÉCNICA DE SEGURANÇA:
+			// Se o jogador É autorizado, nós NÃO forçamos SetIsColliding(false). 
+			// Nós deixamos a variável com o valor que o super.EvaluateCollision determinou. 
+			// Assim, evitamos que o player construa itens dentro de pedras ou paredes.
 		}
-		super.EvaluateCollision(action_item);
 	}
-
-	
 }
-

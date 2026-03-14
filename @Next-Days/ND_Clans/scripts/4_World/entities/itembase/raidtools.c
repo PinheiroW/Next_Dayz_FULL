@@ -1,31 +1,10 @@
-modded class Hacksaw extends ToolBase
+modded class Hacksaw
 {
 	override void SetActions()
 	{
 		super.SetActions();
-		AddAction(alpActionDisassemblePlotPole);
 		
+		// Registra a ação de desmontar/empacotar o Plot Pole na Hacksaw
+		AddAction(alpActionDisassemblePlotPole);
 	}
 }
-
-/*
-modded class Shovel extends ItemBase
-{
-	override void SetActions()
-	{
-		super.SetActions();
-		AddAction(alpActionDisassemblePlotPole);
-		
-	}
-}
-
-modded class Pickaxe extends ItemBase
-{
-	override void SetActions()
-	{
-		super.SetActions();
-		AddAction(alpActionDisassemblePlotPole);
-		
-	}
-}	
-*/

@@ -1,10 +1,7 @@
-
 class alp_HouseKey_Base: Inventory_Base
 {
-
-	int 			alp_HouseKeyID = -1;
-	
-	int 			alp_KeyID = -1;
+	int alp_HouseKeyID = -1;
+	int alp_KeyID = -1;
 	
 	override void SetActions()
 	{
@@ -18,7 +15,6 @@ class alp_HouseKey_Base: Inventory_Base
 	{
 		return false;
 	}
-	
 	
 	void SetHouseID(int id)
 	{
@@ -37,10 +33,7 @@ class alp_HouseKey_Base: Inventory_Base
 	{
 		return alp_KeyID;
 	}	
-		
 }
-
-
 
 class alp_AdminHouseKey extends alp_HouseKey_Base
 {
@@ -50,51 +43,45 @@ class alp_AdminHouseKey extends alp_HouseKey_Base
 	}	
 }
 
-
 class alp_HouseKey extends alp_HouseKey_Base
 {
-
-
-
 	void alp_HouseKey()
 	{
-
 		RegisterNetSyncVariableInt("alp_HouseKeyID");
 		RegisterNetSyncVariableInt("alp_KeyID");
 	}
-	
 	
 	override void OnStoreSave( ParamsWriteContext ctx )
 	{   
 		super.OnStoreSave( ctx );
 
-        ctx.Write( alp_HouseKeyID );
-		 ctx.Write( alp_KeyID );
+		ctx.Write( alp_HouseKeyID );
+		ctx.Write( alp_KeyID );
 	}
 	
 	override bool OnStoreLoad( ParamsReadContext ctx, int version )
 	{
-		if ( super.OnStoreLoad( ctx, version ) )
-		{
-			ctx.Read( alp_HouseKeyID );
-			ctx.Read( alp_KeyID );
+		if ( !super.OnStoreLoad( ctx, version ) ) return false;
+		
+		// CORREÇÃO: Prevenção vital contra corrupção do storage.bin do Servidor.
+		// Se a leitura falhar por qualquer motivo (crash de gravação), o item é descartado 
+		// com segurança, sem corromper o inventário do jogador.
+		if ( !ctx.Read( alp_HouseKeyID ) ) return false;
+		if ( !ctx.Read( alp_KeyID ) ) return false;
 
-			return true;
-		}
-		else return false;
+		return true;
 	}	
 	
 	override void AfterStoreLoad()
 	{
 		super.AfterStoreLoad();
 		
-		if (alp_HouseKeyID > 0 )
+		if (alp_HouseKeyID > 0)
 		{
 			SetSynchDirty();
 		}
 	}
 			
-
 	override string GetTooltip()
 	{
 		string tooltip = super.GetTooltip();
@@ -106,11 +93,8 @@ class alp_HouseKey extends alp_HouseKey_Base
 			keyID =  "#pp_doorID: " + alp_KeyID.ToString();
 		}
 		
-		
 		tooltip = tooltip + " - #pp_houseID: " + alp_HouseKeyID.ToString() + ", " + keyID;
 		
 		return tooltip;
 	}
-	
-
 }

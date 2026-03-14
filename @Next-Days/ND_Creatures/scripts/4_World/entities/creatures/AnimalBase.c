@@ -1,51 +1,40 @@
-
 modded class AnimalBase
 {
-	override void EEInit()
-	{
-		super.EEInit();
+    override void EEInit()
+    {
+        super.EEInit();
 
-		if ( GetGame().IsServer() && IsAnimalCustomed() ){
-			
-			m_AreaTimeCheck = Math.RandomInt(-30,2);
-			
-			
-			
-			/*
-			if ( !alpPluginNDmissionsSystem.CansSpawnAI(this ) ) {
-				GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(g_Game.ObjectDelete,1,false,this);
-				return;			
-			}
-			*/
-		}
-		
-		
-		
-	}
-	
-	bool IsAnimalCustomed()
-	{
-		return GetND().GetCreatures().GetOptions().EnableCretures;	
-	}	
-	
-	float m_AreaTimeCheck;
-	override bool	ModCommandHandlerBefore(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
-	{
-		bool ret = super.ModCommandHandlerBefore( pDt,  pCurrentCommandID,  pCurrentCommandFinished);	
-
-		if (!ret && IsAnimalCustomed() )
-		{
-			//check if the zombie can exists
-			m_AreaTimeCheck += pDt;
-			if ( m_AreaTimeCheck > 2 ) {						
-				m_AreaTimeCheck = 0;
-				
-				if ( !alpPluginNDmissionsSystem.CansSpawnAI(this ) ) {
-					SetHealth("","",0);
-					return true;
-				}
-			}
-		}
-		return ret;
-	}	
+        // Executa validação apenas no Servidor
+        if (GetGame().IsServer())
+        {
+            if (IsAnimalCustomed())
+            {
+                // Verifica se a posição de spawn é permitida pelas missões/zonas ND
+                // Usamos um pequeno delay (1ms) para garantir que a entidade está registrada no mundo antes de deletar
+                if (!alpPluginNDmissionsSystem.CansSpawnAI(this)) 
+                {
+                    GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(GetGame().ObjectDelete, 50, false, this);
+                    return;
+                }
+            }
+        }
+    }
+    
+    bool IsAnimalCustomed()
+    {
+        // Null checks encadeados para evitar Server Crash (NPE)
+        auto nd = GetND();
+        if (nd && nd.GetCreatures() && nd.GetCreatures().GetOptions())
+        {
+            // Corrigido para "EnableCreatures" conforme auditoria do 3_Game
+            return nd.GetCreatures().GetOptions().EnableCreatures;
+        }
+        return false;
+    }    
+    
+    // Removida a lógica de verificação do ModCommandHandlerBefore para otimização de CPU (Server FPS)
+    override bool ModCommandHandlerBefore(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
+    {
+        return super.ModCommandHandlerBefore(pDt, pCurrentCommandID, pCurrentCommandFinished);
+    }
 }

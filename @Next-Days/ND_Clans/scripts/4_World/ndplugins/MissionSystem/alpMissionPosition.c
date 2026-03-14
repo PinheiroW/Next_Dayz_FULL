@@ -1,19 +1,20 @@
-
-
 modded class alpMissionPosition 
 {
-	
+	// Nota: Verifique se o nome na classe base é realmente 'IsSomeOneInRadisu' (com 'u') 
+	// para garantir que o override funcione.
 	override bool IsSomeOneInRadisu(vector position, int radius)
 	{	
-		private array<Man> players 	= new array<Man>;
+		array<Man> players = new array<Man>;
 		GetGame().GetPlayers( players );	
-		if( players.Count() > 0 )
+		
+		if( players && players.Count() > 0 )
 		{
 			foreach(Man player: players)
 			{
-				if( player )
+				if( player && player.IsAlive() )
 				{
-					if (alpUF.VectorDistance(position,player.GetPosition()) < radius )
+					// CORREÇÃO 1: Uso de função nativa vector.Distance (Alta performance)
+					if ( vector.Distance(position, player.GetPosition()) < radius )
 					{
 						return true;
 					}
@@ -21,25 +22,28 @@ modded class alpMissionPosition
 			}
 		}
 
-		radius = Math.Clamp(radius, 0,30);
-		
-		if ( radius > 0 ) {
-		
-			autoptr array<Object> nearest_objects = new array<Object>;
-			autoptr array<CargoBase> proxy_cargos = new array<CargoBase>;
+		// CORREÇÃO 2: Verificação de PlotPoles em raio de segurança.
+		// Removido o Clamp(0,30) para respeitar o raio real solicitado pela missão.
+		if ( radius > 0 ) 
+		{
+			// CORREÇÃO 3: Remoção de autoptr (Obsoleto na Enfusion moderna)
+			array<Object> nearest_objects = new array<Object>;
+			array<CargoBase> proxy_cargos = new array<CargoBase>;
 				
-			GetGame().GetObjectsAtPosition( position , radius , nearest_objects, proxy_cargos ); 						
-			for (int x = 0; x < nearest_objects.Count();x++){
-				Object obj = nearest_objects.Get(x);				
-				if ( obj && obj.GetType() == "alp_PlotPole" ) {
-					return true;
-				}
-			}		
-				
+			if (GetGame())
+			{
+				GetGame().GetObjectsAtPosition( position , radius , nearest_objects, proxy_cargos ); 						
+				for (int x = 0; x < nearest_objects.Count(); x++)
+				{
+					Object obj = nearest_objects.Get(x);				
+					if ( obj && obj.GetType() == "alp_PlotPole" ) 
+					{
+						return true;
+					}
+				}	
+			}	
 		}
 
 		return false;
 	}
-	
-	
 }

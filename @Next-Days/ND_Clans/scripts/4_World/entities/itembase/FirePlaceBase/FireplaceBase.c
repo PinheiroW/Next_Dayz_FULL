@@ -1,4 +1,4 @@
-modded class FireplaceBase extends ItemBase
+modded class FireplaceBase
 {
 	override bool IsBuildingALP()
 	{

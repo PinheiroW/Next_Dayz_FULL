@@ -8,18 +8,13 @@ modded class ActionConstructor
 		
 		actions.Insert(alpAddFriendAction);
 
-
 		actions.Insert(alpActionDisassemblePlotPole);
 		actions.Insert(alpActionManagePlotPole);
-
 		
 		actions.Insert(alpActionLockDoors);
 		actions.Insert(alpActionUnlockDoors);
 		
 		actions.Insert(alpActionClaimBed);
 		actions.Insert(alpActionReleaseBed);
-		
-
 	}
 }
-

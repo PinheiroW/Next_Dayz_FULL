@@ -1,38 +1,41 @@
-
 modded class alpPlayerHive 
 {
-
 	void SetClaimedBed(int pp, string house, int index)
 	{
-		
-		int ppID = GetStore().Base_Owner;
-		string hID = GetStore().Base_House;
-		int old_index = GetStore().Base_Bed;
+		auto store = GetStore();
+		if (!store) return;
+
+		int ppID = store.Base_Owner;
+		string hID = store.Base_House;
+		int old_index = store.Base_Bed;
 		
 		if ( ppID )
-		{//delete old record
+		{
+			// Libera a cama antiga se houver
 			int pID = GetPlayer().GetPlayerID();		
 			alpClansPlugin.ReleaseBed( ppID, hID, old_index, pID );
-		}				
-		GetStore().Base_Owner = pp;
-		GetStore().Base_House = house;
-		GetStore().Base_Bed = index;
+		}
+		
+		store.Base_Owner = pp;
+		store.Base_House = house;
+		store.Base_Bed = index;
 		Save();
-	
 	}
+
 	void ReleaseClaimedBed(int pp, string house, int index)
 	{
-		
-		int ppID = GetStore().Base_Owner;
-		string hID = GetStore().Base_House;
-		int old_index = GetStore().Base_Bed;
+		auto store = GetStore();
+		if (!store) return;
+
+		int ppID = store.Base_Owner;
+		string hID = store.Base_House;
+		int old_index = store.Base_Bed;
 		
 		if ( ppID == pp && hID == house && index == old_index )
-		{//delete old record
-			GetStore().Base_Owner = 0;
-			GetStore().Base_House = "";
-			GetStore().Base_Bed = 0;
-			
+		{
+			store.Base_Owner = 0;
+			store.Base_House = "";
+			store.Base_Bed = 0;
 			Save();
 		}				
 	}	
@@ -40,26 +43,31 @@ modded class alpPlayerHive
 	vector GetBedLocation()
 	{
 		vector pos = "0 0 0";
+		auto store = GetStore();
+		if (!store) return pos;
 		
-		int ownerID = GetStore().Base_Owner;
-		string houseID = GetStore().Base_House;
-		int bedID = GetStore().Base_Bed;	
-		int pID = GetPlayer().GetPlayerID();
-		int clanID = GetStore().ClanID;		
+		int ownerID = store.Base_Owner;
+		string houseID = store.Base_House;
+		int bedID = store.Base_Bed;	
+		
+		PlayerBase player = GetPlayer();
+		if (!player) return pos;
+
+		int pID = player.GetPlayerID();
+		int clanID = store.ClanID;
+
 		if ( ownerID )
 		{	
 			pos = alpClansPlugin.GetBedLocation( ownerID, houseID, bedID, pID, clanID );
 			
 			if (pos == "0 0 0")
-			{//delete spawn
-				GetStore().Base_Owner = 0;
-				GetStore().Base_House = "";
-				GetStore().Base_Bed = 0;
-				
+			{
+				store.Base_Owner = 0;
+				store.Base_House = "";
+				store.Base_Bed = 0;
 				Save();			
 			}
 		}
-	
 		return pos;
 	}
 	
@@ -67,19 +75,25 @@ modded class alpPlayerHive
 	{
 		super.OnConnect();
 	
-		if (GetGame().IsServer() )
+		if (GetGame() && GetGame().IsServer())
 		{
-			vector pos = "0 0 0";
-			bool enhancedSpawn = GetND().GetClans().GetSpawn().EnableEnhancedSpawnSettings;			
+			PlayerBase player = GetPlayer();
+			if (!player) return;
+
+			// CORREÇÃO 1: Failsafe para evitar NPE Crash no acesso aos Plugins
+			if (!GetND() || !GetND().GetClans()) return;
+
+			auto clansPlugin = GetND().GetClans();
+			bool enhancedSpawn = clansPlugin.GetSpawn().EnableEnhancedSpawnSettings;			
 			bool equipmentChanged = false;
 			
-			int reputationLevel = GetPlayer().GetStatPerkReputation().Get();
-			autoptr array<string> messages = new array<string>;
+			int reputationLevel = player.GetStatPerkReputation().Get();
 			
-			if ( IsActiveDeathEvent()  )  //second condition to solve disconnect while being unconscious
+			// CORREÇÃO 2: Substituição de autoptr obsoleto
+			array<string> messages = new array<string>;
+			
+			if ( IsActiveDeathEvent() ) 
 			{
-
-				//equipment
 				if ( enhancedSpawn )
 				{
 					equipmentChanged = true;
@@ -87,194 +101,159 @@ modded class alpPlayerHive
 					{
 						GetStore().IsNewborn = false;
 						
-						alpSpawnSetNewborn spawnsetnewborn = GetND().GetClans().GetSpawnManagement().GetNewbornSet();					
-						if (spawnsetnewborn)
-						{							
-							EquipPlayer( spawnsetnewborn.Equipments , spawnsetnewborn.lootMaxCount);
-							
-							foreach(string m : spawnsetnewborn.Messages)
-							{
-								messages.Insert(m);	
+						auto spawnMgmt = clansPlugin.GetSpawnManagement();
+						if (spawnMgmt)
+						{
+							alpSpawnSetNewborn spawnsetnewborn = spawnMgmt.GetNewbornSet();					
+							if (spawnsetnewborn)
+							{							
+								EquipPlayer( spawnsetnewborn.Equipments, spawnsetnewborn.lootMaxCount);
+								foreach(string m : spawnsetnewborn.Messages) messages.Insert(m);	
+								
+								if ( spawnsetnewborn.Water ) player.GetStatWater().Set( spawnsetnewborn.Water );
+								if ( spawnsetnewborn.Energy ) player.GetStatEnergy().Set( spawnsetnewborn.Energy );
 							}
-							
-							if ( spawnsetnewborn.Water )
-							{
-								GetPlayer().GetStatWater().Set( spawnsetnewborn.Water );
-							}
-							if ( spawnsetnewborn.Energy )
-							{
-								GetPlayer().GetStatEnergy().Set( spawnsetnewborn.Energy );
-							}							
-						}						
+						}
 					}
 					else
-					{//equipment according to reputation
-						alpSpawnSetPlayer spawnset = GetND().GetClans().GetSpawnManagement().GetSpawnSet(reputationLevel);
-						
-						if (spawnset)
-						{	
-							EquipPlayer( spawnset.Equipments , spawnset.lootMaxCount );
-							
-							foreach(string m2 : spawnset.Messages)
-							{
-								messages.Insert(m2);	
-							}	
-							
-							if ( spawnset.Water )
-							{
-								GetPlayer().GetStatWater().Set( spawnset.Water );
+					{
+						auto spawnMgmtRel = clansPlugin.GetSpawnManagement();
+						if (spawnMgmtRel)
+						{
+							alpSpawnSetPlayer spawnset = spawnMgmtRel.GetSpawnSet(reputationLevel);
+							if (spawnset)
+							{	
+								EquipPlayer( spawnset.Equipments, spawnset.lootMaxCount );
+								foreach(string m2 : spawnset.Messages) messages.Insert(m2);	
+								
+								if ( spawnset.Water ) player.GetStatWater().Set( spawnset.Water );
+								if ( spawnset.Energy ) player.GetStatEnergy().Set( spawnset.Energy );
 							}
-							if ( spawnset.Energy )
-							{
-								GetPlayer().GetStatEnergy().Set( spawnset.Energy );
-							}														
 						}
 					}
 				}
 
-				//spawn in base
-				if ( GetND().GetClans().GetSpawn().EnableSpawnInBase )
+				if ( clansPlugin.GetSpawn().EnableSpawnInBase )
 				{
-					pos = GetBedLocation();
-					
-					if ( pos != "0 0 0")
+					vector spawnPos = GetBedLocation();
+					if ( spawnPos != "0 0 0")
 					{
-						int pID = GetPlayer().GetPlayerID();
-						if ( GetND().GetClans().CanSpawnInBase( pID ) )
+						if ( clansPlugin.CanSpawnInBase( player.GetPlayerID() ) )
 						{
-							pos = pos + "0 0.5 0"; 
-							
-							GetPlayer().SetPosition( pos );						
+							spawnPos[1] = spawnPos[1] + 0.5; 
+							player.SetPosition( spawnPos );						
 						}
-
 					}				
 				}
-				
-
-				
-				
 				DeactiveEvent( ALP_SPAWN_EVENT.DEATH );
 			}
-			else
+			else if ( player.IsPlayerSpawn() && enhancedSpawn && GetStore().IsNewborn )
 			{
-				if ( GetPlayer().IsPlayerSpawn() && enhancedSpawn &&  GetStore().IsNewborn )
-				{//first spawn after WIPE
-					GetStore().IsNewborn = false;
-					equipmentChanged = true;
-					
-					alpSpawnSetNewborn spawnsetnewborn2 = GetND().GetClans().GetSpawnManagement().GetNewbornSet();					
+				GetStore().IsNewborn = false;
+				equipmentChanged = true;
+				
+				auto spawnMgmtWipe = clansPlugin.GetSpawnManagement();
+				if (spawnMgmtWipe)
+				{
+					alpSpawnSetNewborn spawnsetnewborn2 = spawnMgmtWipe.GetNewbornSet();					
 					if (spawnsetnewborn2)
 					{						
-						EquipPlayer( spawnsetnewborn2.Equipments , spawnsetnewborn2.lootMaxCount);
-						
-						foreach(string m3 : spawnsetnewborn2.Messages)
-						{
-							messages.Insert(m3);	
-						}	
-						if ( spawnsetnewborn2.Water )
-						{
-							GetPlayer().GetStatWater().Set( spawnsetnewborn2.Water );
-						}
-						if ( spawnsetnewborn2.Energy )
-						{
-							GetPlayer().GetStatEnergy().Set( spawnsetnewborn2.Energy );
-						}													
-					}					
+						EquipPlayer( spawnsetnewborn2.Equipments, spawnsetnewborn2.lootMaxCount);
+						foreach(string m3 : spawnsetnewborn2.Messages) messages.Insert(m3);	
+						if ( spawnsetnewborn2.Water ) player.GetStatWater().Set( spawnsetnewborn2.Water );
+						if ( spawnsetnewborn2.Energy ) player.GetStatEnergy().Set( spawnsetnewborn2.Energy );
+					}
 				}
 			}
 						
-			if ( pos != "0 0 0" || equipmentChanged )
+			if ( equipmentChanged && messages.Count() > 0 )
 			{
 				int timeOffset = 500;
 				int messageStart = 6000;
-				int timeMessage;
-				int count = 0;
-				if ( messages )
-				{//private messages
-					foreach(string mes : messages)
-					{
-						
-						timeMessage = messageStart + timeOffset * count;
-						GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.SendSpawnMessage, timeMessage,false, mes);
-						count++;
-					}				
+				for (int i = 0; i < messages.Count(); i++)
+				{
+					int timeMessage = messageStart + (timeOffset * i);
+					GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.SendSpawnMessage, timeMessage, false, messages.Get(i));
 				}
-				
-				GetPlayer().SetSynchDirty();
+				player.SetSynchDirty();
 			}			
 		}			
-		
-			
 	}
 
-	
 	void SendSpawnMessage(string message)
 	{
-		GetND().GetNotf().SendPersonalMessage( message, GetPlayer() );	
+		if (GetND() && GetND().GetNotf())
+		{
+			GetND().GetNotf().SendPersonalMessage( message, GetPlayer() );	
+		}
 	}	
 	
 	override void SaveCommonStats()
 	{
 		super.SaveCommonStats();
-
-		//save death event
-		GetStore().Event =  GetStore().Event | ALP_SPAWN_EVENT.DEATH;
-		
+		auto store = GetStore();
+		if (store) store.Event = store.Event | ALP_SPAWN_EVENT.DEATH;
 	}	
 	
 	bool IsActiveDeathEvent()
 	{
-		return GetStore().Event & ALP_SPAWN_EVENT.DEATH;
+		auto store = GetStore();
+		if (!store) return false;
+		return store.Event & ALP_SPAWN_EVENT.DEATH;
 	}
-	
 	
 	bool IsActiveEvent(int type)
 	{
-		return GetStore().Event & type;
+		auto store = GetStore();
+		if (!store) return false;
+		return store.Event & type;
 	}
 	
 	void DeactiveEvent(int type)
 	{
-		if ( IsActiveEvent( type ) )
+		auto store = GetStore();
+		if ( store && IsActiveEvent( type ) )
 		{
-			GetStore().Event = ~type & GetStore().Event;
+			store.Event = ~type & store.Event;
 		}
-		
 	}
 	
 	override void OnFirstConnect()
 	{
 		super.OnFirstConnect();
-		
-		alp_StoreValues.IsNewborn = true;		
+		if (alp_StoreValues) alp_StoreValues.IsNewborn = true;		
 	}
-	
 	
 	void EquipPlayer(array<ref alpLootCargo> equipments, int maxCount = 0 )
 	{
-		if ( equipments )
+		PlayerBase player = GetPlayer();
+		if (!player || !equipments) return;
+
+		player.ClearInventory();
+		
+		// CORREÇÃO 3: Otimização de Performance (Referência de mapa fora do loop)
+		if (!GetND() || !GetND().GetMS()) return;
+		auto lootMap = GetND().GetMS().alp_LootMap;
+
+		int count = 0;
+		foreach (alpLootCargo cargoMan : equipments)
 		{
-			GetPlayer().ClearInventory();
-			int count = 0;
-			foreach (alpLootCargo cargoMan : equipments)
+			if (!cargoMan) continue;
+
+			alpLoot lootMan = null;
+			if (lootMap) lootMan = lootMap.Get(cargoMan.title);
+				
+			if (lootMan) 
 			{
-				alpLoot lootMan =  GetND().GetMS().alp_LootMap.Get(cargoMan.title);
-					
-				if (lootMan) 
-				{
-					alpMission.SpawnCargo( GetPlayer(),lootMan,cargoMan.chance);
-				}
-				else
-				{
-					alpMission.SpawnEntityInCargo(GetPlayer(), cargoMan.title, cargoMan.chance );
-				}								
-				count++; 												
-				if ( maxCount && count >= maxCount ){
-					break;
-				}					
-			}			
-		}
-		
-		
+				alpMission.SpawnCargo( player, lootMan, cargoMan.chance);
+			}
+			else
+			{
+				alpMission.SpawnEntityInCargo(player, cargoMan.title, cargoMan.chance );
+			}								
+			
+			count++; 												
+			if ( maxCount > 0 && count >= maxCount ) break;
+		}			
 	}
 }

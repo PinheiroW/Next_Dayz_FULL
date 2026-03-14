@@ -1,12 +1,7 @@
-modded class TentBase extends ItemBase
+modded class TentBase
 {
-
 	override bool IsBuildingALP()
 	{
 		return true;
 	}
-
-
-
-
-};
+}

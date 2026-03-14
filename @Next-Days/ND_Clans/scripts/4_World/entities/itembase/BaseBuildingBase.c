@@ -1,5 +1,7 @@
 #ifndef EXPANSIONMODBASEBUILDING
-modded class BaseBuildingBase extends ItemBase
+
+// CORREÇÃO 1: Remoção do "extends ItemBase" redundante
+modded class BaseBuildingBase
 {
 	int m_OwnerID;
 	int m_ClanID;
@@ -16,12 +18,12 @@ modded class BaseBuildingBase extends ItemBase
 		RegisterNetSyncVariableInt("m_ClanID");
 		if (GetGame().IsServer() )
 		{	
-			//damageZone
 			if ( m_DamageZoneMap )
 			{
 				alp_Damage = new map<string,float>;
 				
-				for (int d = 0; d < m_DamageZoneMap.Count();d++){
+				for (int d = 0; d < m_DamageZoneMap.Count(); d++)
+				{
 					string zone = m_DamageZoneMap.GetKey(d);			
 					alp_Damage.Set( zone, ALP_MAX_HEALTH );
 				}		
@@ -37,9 +39,13 @@ modded class BaseBuildingBase extends ItemBase
 	
 	float GetDynamiteDamage(int ammoType)
 	{
+		// CORREÇÃO 2: Failsafe para evitar NPE Crash no acesso aos Core Plugins
+		if (!GetND() || !GetND().GetClans() || !GetND().GetClans().GetBases()) return 1.0;
+
 		string owneris;
 		bool ownerIsON = false;
-		if ( GetND().GetClans().IsPlayerInGame( m_OwnerID ) || ( m_ClanID > 0 &&  GetND().GetClans().IsClanInGame( m_ClanID ) ) ) {//on server
+		if ( GetND().GetClans().IsPlayerInGame( m_OwnerID ) || ( m_ClanID > 0 && GetND().GetClans().IsClanInGame( m_ClanID ) ) ) 
+		{
 			int currentTime = GetGame().GetTime() - (180 * 1000);	
 			if ( alp_LastAttack > currentTime )
 			{	
@@ -48,22 +54,24 @@ modded class BaseBuildingBase extends ItemBase
 			}			
 			owneris	= " DynamiteDamageRatioOwnerOn";
 			ownerIsON = true;
-		} else {//off server
+		} 
+		else 
+		{
 			owneris	= " DynamiteDamageRatioOwnerOff";
 		}
+		
 		string path = "CfgVehicles " + GetType() + owneris;	
 		float ratio = GetGame().ConfigGetFloat(path);
 
-		//check overrides
-		if ( GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding  ){
+		if ( GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding )
+		{
 			string type = GetType();
-			foreach( alpRaidTNT_BaseBuilding settings : GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding ) {
-				if (settings.Name == type){
-					if (ownerIsON ) {
-						ratio = settings.OwnerON;
-					} else {
-						ratio = settings.OwnerOFF;
-					}
+			foreach( alpRaidTNT_BaseBuilding settings : GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding ) 
+			{
+				if (settings.Name == type)
+				{
+					if (ownerIsON) ratio = settings.OwnerON;
+					else ratio = settings.OwnerOFF;
 					break;
 				}
 			}
@@ -71,37 +79,44 @@ modded class BaseBuildingBase extends ItemBase
 		return ratio;
 	}
 	
-	
-	
-	//Build
 	override void OnPartBuiltServer( notnull Man player, string part_name, int action_id )
 	{
 		super.OnPartBuiltServer(player, part_name, action_id);
-		PlayerBase p;
-		if (  Class.CastTo( p,  player ) ){
+		PlayerBase p = PlayerBase.Cast( player );
+		if ( p )
+		{
 			int clan = p.GetClanID();
 			int pid = p.GetPlayerID();
-			SetPlotPoleID(pid,clan);
+			SetPlotPoleID(pid, clan);
 		}
-
 	}
 	
 	override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
 		super.EEHitBy(damageResult,  damageType,  source,  component,  dmgZone,  ammo,  modelPos,  speedCoef);	
-		if ( GetGame() && GetGame().IsServer() && GetND().GetClans().GetBases().EnableNextDaysRaidMechanics  ){			
-			if ( IsOwnedByPlayer() ){				
-				if ( damageType == DT_EXPLOSION ){
+		
+		// CORREÇÃO 3: Blindagem da chamada contra Null Pointers
+		if ( GetGame() && GetGame().IsServer() && GetND() && GetND().GetClans() && GetND().GetClans().GetBases() && GetND().GetClans().GetBases().EnableNextDaysRaidMechanics )
+		{			
+			if ( IsOwnedByPlayer() )
+			{				
+				if ( damageType == DT_EXPLOSION )
+				{
 					float allowedDamage = 0;
 					int ammoType = GetAmmoType( ammo );
-					if ( ammoType ){				
+					if ( ammoType )
+					{				
 						allowedDamage = GetDynamiteDamage(ammoType);
 					}
 					SetBaseBuildingHealth( allowedDamage );
-				} else {
+				} 
+				else 
+				{
 					float damage = damageResult.GetDamage(dmgZone,"Health");	
 					float health = GetHealth(dmgZone,"Health");	
 					
+					// Nota de Design: Como você está somando (+ damage) ao health, 
+					// isso efetivamente curará a base do dano de bala, tornando-a imune a tiros (Apenas C4 destrói).
 					health += damage;
 					SetHealth(dmgZone,"Health",health);	
 				}					
@@ -109,41 +124,40 @@ modded class BaseBuildingBase extends ItemBase
 		}		
 	}	
 	
-	int GetAmmoType(string ammo ){
-		switch (ammo){
-			case "alp_DynamiteExplosion":				
-				return alpAMMOTYPE.L2;		
-			case "Plastic_Explosive_Ammo":				
-				return alpAMMOTYPE.L1;		
+	int GetAmmoType(string ammo )
+	{
+		switch (ammo)
+		{
+			case "alp_DynamiteExplosion": return alpAMMOTYPE.L2;		
+			case "Plastic_Explosive_Ammo": return alpAMMOTYPE.L1;		
 		}
 		return 0;
 	}	
 	
-	bool IsOwnedByPlayer(){
+	bool IsOwnedByPlayer()
+	{
 		return m_OwnerID;
 	}
 	
-	void SetBaseBuildingHealth(float damage ){
+	void SetBaseBuildingHealth(float damage )
+	{
 		if ( alp_Damage )
 		{
 			string name;
-			float last_health,health,maxhealth;
-			for(int i = 0; i < alp_Damage.Count();i++)
+			float last_health, health, maxhealth;
+			for(int i = 0; i < alp_Damage.Count(); i++)
 			{
 				name = alp_Damage.GetKey(i);
-				
 				health = GetHealth01(name,"Health");
-				
 				last_health = alp_Damage.GetElement(i);
 
-				if ( health != last_health   )
+				if ( health != last_health )
 				{
 					last_health -= damage;
 
 					if ( last_health > 0 )
 					{
 						alp_Damage.Set( name  , last_health );	
-						
 						maxhealth =  GetMaxHealth(name,"Health");	
 						maxhealth *= last_health;						
 						SetHealth(name,"Health",maxhealth);										
@@ -151,22 +165,26 @@ modded class BaseBuildingBase extends ItemBase
 					else
 					{
 						GetGame().ObjectDelete( this );
-	
+						// CORREÇÃO 4: EVITA CRASH CRÍTICO (Access Violation)
+						// O objeto acaba de ser apagado. O loop DEVE ser quebrado imediatamente, 
+						// caso contrário tentará acessar memória morta e derrubará o servidor.
+						return; 
 					}						
 				}				
 			}
-		
 		}	
 	}	
 	
-	override bool IsBuildingALP(){
+	override bool IsBuildingALP()
+	{
 		return true;
 	}
 }
+
 #else		
+
 modded class BaseBuildingBase 
 {
-	
 	int alp_OwnerID;
 	int m_ClanID;
 	float ALP_MAX_HEALTH = 1;
@@ -182,12 +200,12 @@ modded class BaseBuildingBase
 		RegisterNetSyncVariableInt("m_ClanID");
 		if (GetGame().IsServer() )
 		{	
-			//damageZone
 			if ( m_DamageZoneMap )
 			{
 				alp_Damage = new map<string,float>;
 				
-				for (int d = 0; d < m_DamageZoneMap.Count();d++){
+				for (int d = 0; d < m_DamageZoneMap.Count(); d++)
+				{
 					string zone = m_DamageZoneMap.GetKey(d);			
 					alp_Damage.Set( zone, ALP_MAX_HEALTH );
 				}		
@@ -203,9 +221,13 @@ modded class BaseBuildingBase
 	
 	float GetDynamiteDamage(int ammoType)
 	{
+		// Null Check replicado para versão Expansion
+		if (!GetND() || !GetND().GetClans() || !GetND().GetClans().GetBases()) return 1.0;
+
 		string owneris;
 		bool ownerIsON = false;
-		if ( GetND().GetClans().IsPlayerInGame( alp_OwnerID ) || ( m_ClanID > 0 &&  GetND().GetClans().IsClanInGame( m_ClanID ) ) ) {//on server
+		if ( GetND().GetClans().IsPlayerInGame( alp_OwnerID ) || ( m_ClanID > 0 && GetND().GetClans().IsClanInGame( m_ClanID ) ) ) 
+		{
 			int currentTime = GetGame().GetTime() - (180 * 1000);	
 			if ( alp_LastAttack > currentTime )
 			{	
@@ -214,22 +236,24 @@ modded class BaseBuildingBase
 			}			
 			owneris	= " DynamiteDamageRatioOwnerOn";
 			ownerIsON = true;
-		} else {//off server
+		} 
+		else 
+		{
 			owneris	= " DynamiteDamageRatioOwnerOff";
 		}
+		
 		string path = "CfgVehicles " + GetType() + owneris;	
 		float ratio = GetGame().ConfigGetFloat(path);
 
-		//check overrides
-		if ( GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding  ){
+		if ( GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding )
+		{
 			string type = GetType();
-			foreach( alpRaidTNT_BaseBuilding settings : GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding ) {
-				if (settings.Name == type){
-					if (ownerIsON ) {
-						ratio = settings.OwnerON;
-					} else {
-						ratio = settings.OwnerOFF;
-					}
+			foreach( alpRaidTNT_BaseBuilding settings : GetND().GetClans().GetBases().Override_Raid_TNT_BaseBuilding ) 
+			{
+				if (settings.Name == type)
+				{
+					if (ownerIsON) ratio = settings.OwnerON;
+					else ratio = settings.OwnerOFF;
 					break;
 				}
 			}
@@ -237,34 +261,39 @@ modded class BaseBuildingBase
 		return ratio;
 	}
 	
-	
-	
-	//Build
 	override void OnPartBuiltServer( notnull Man player, string part_name, int action_id )
 	{
 		super.OnPartBuiltServer(player, part_name, action_id);
-		PlayerBase p;
-		if (  Class.CastTo( p,  player ) ){
+		PlayerBase p = PlayerBase.Cast( player );
+		if ( p )
+		{
 			int clan = p.GetClanID();
 			int pid = p.GetPlayerID();
-			SetPlotPoleID(pid,clan);
+			SetPlotPoleID(pid, clan);
 		}
-
 	}
 	
 	override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
 		super.EEHitBy(damageResult,  damageType,  source,  component,  dmgZone,  ammo,  modelPos,  speedCoef);	
-		if ( GetGame() && GetGame().IsServer() && GetND().GetClans().GetBases().EnableNextDaysRaidMechanics  ){			
-			if ( IsOwnedByPlayer() ){				
-				if ( damageType == DT_EXPLOSION ){
+		
+		// Null Check replicado para versão Expansion
+		if ( GetGame() && GetGame().IsServer() && GetND() && GetND().GetClans() && GetND().GetClans().GetBases() && GetND().GetClans().GetBases().EnableNextDaysRaidMechanics )
+		{			
+			if ( IsOwnedByPlayer() )
+			{				
+				if ( damageType == DT_EXPLOSION )
+				{
 					float allowedDamage = 0;
 					int ammoType = GetAmmoType( ammo );
-					if ( ammoType ){				
+					if ( ammoType )
+					{				
 						allowedDamage = GetDynamiteDamage(ammoType);
 					}
 					SetBaseBuildingHealth( allowedDamage );
-				} else {
+				} 
+				else 
+				{
 					float damage = damageResult.GetDamage(dmgZone,"Health");	
 					float health = GetHealth(dmgZone,"Health");	
 					
@@ -275,41 +304,40 @@ modded class BaseBuildingBase
 		}		
 	}	
 	
-	int GetAmmoType(string ammo ){
-		switch (ammo){
-			case "alp_DynamiteExplosion":				
-				return alpAMMOTYPE.L2;		
-			case "Plastic_Explosive_Ammo":				
-				return alpAMMOTYPE.L1;		
+	int GetAmmoType(string ammo )
+	{
+		switch (ammo)
+		{
+			case "alp_DynamiteExplosion": return alpAMMOTYPE.L2;		
+			case "Plastic_Explosive_Ammo": return alpAMMOTYPE.L1;		
 		}
 		return 0;
 	}	
 	
-	bool IsOwnedByPlayer(){
+	bool IsOwnedByPlayer()
+	{
 		return alp_OwnerID;
 	}
 	
-	void SetBaseBuildingHealth(float damage ){
+	void SetBaseBuildingHealth(float damage )
+	{
 		if ( alp_Damage )
 		{
 			string name;
-			float last_health,health,maxhealth;
-			for(int i = 0; i < alp_Damage.Count();i++)
+			float last_health, health, maxhealth;
+			for(int i = 0; i < alp_Damage.Count(); i++)
 			{
 				name = alp_Damage.GetKey(i);
-				
 				health = GetHealth01(name,"Health");
-				
 				last_health = alp_Damage.GetElement(i);
 
-				if ( health != last_health   )
+				if ( health != last_health )
 				{
 					last_health -= damage;
 
 					if ( last_health > 0 )
 					{
 						alp_Damage.Set( name  , last_health );	
-						
 						maxhealth =  GetMaxHealth(name,"Health");	
 						maxhealth *= last_health;						
 						SetHealth(name,"Health",maxhealth);										
@@ -317,23 +345,21 @@ modded class BaseBuildingBase
 					else
 					{
 						GetGame().ObjectDelete( this );
-	
+						// Crash Prevent
+						return;
 					}						
 				}				
 			}
-		
 		}	
 	}	
 	
-	override bool IsBuildingALP(){
+	override bool IsBuildingALP()
+	{
 		return true;
 	}
 }	
 		
 #endif
-
-
-
 
 modded class Watchtower extends BaseBuildingBase
 {	
@@ -341,5 +367,4 @@ modded class Watchtower extends BaseBuildingBase
 	{
 		return false;
 	}
-	
 }
