@@ -1,0 +1,21 @@
+
+
+/*
+enum alpeConsumeType : EConsumeTypeNamalsk
+{
+	ENVIRO_POND_CONTAMINED,
+	ENVIRO_WELL_CONTAMINED,
+	ENVIRO_POND_CONTAMINED_FREEZING,
+	ENVIRO_SNOW_CONTAMINED_FROZEN,	
+}
+
+	
+*/
+enum alpeConsumeType : EConsumeType
+{
+	ENVIRO_POND_CONTAMINED,
+	ENVIRO_WELL_CONTAMINED,
+}
+
+
+

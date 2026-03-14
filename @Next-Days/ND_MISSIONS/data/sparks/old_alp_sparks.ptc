@@ -1,0 +1,94 @@
+EffectDef {
+ Emitors {
+  EmitorDef sparks {
+   ConeAngle 360 0 75
+   MaxNum 100
+   BirthRate 10
+   LocalTransform 1
+   Material "graphics/particles/materials/fire/sparks_05.emat"
+   SizeMultiplier 0.04
+   SizeRND 0.05
+   RandomRotDir 1
+   RotMultiplier 45
+   StretchMultiplier 0
+   VelAngle 0
+   RandomAngle 1
+   Velocity 2
+   VelAffect 0.2
+   GravityMultiply 0.5
+   GravityMultiplyRND 0
+   Wind 0
+   AnimOnce 0
+   AnimFPS 30
+   LifetimeByAnim 0
+   RandomFrame 1
+   LifeTime 0.05
+   LifeTimeRND 0.1
+   Color {
+    0 1 1 1 1 0.565 0.0635 0.0988
+   }
+   Alpha {
+    0 1 1 0
+   }
+   RotationSpeed {
+    0 0 1 1
+   }
+   Size {
+    0 0.1 0.25 0.75 1 0
+   }
+  }
+  EmitorDef sparks_fire {
+   ConeAngle 360 0 30
+   BirthRate 20
+   BirthRateRND 10
+   LocalTransform 1
+   Material "graphics/particles/materials/fire/fire_flare_03.emat"
+   CenterX 0
+   CenterY -0.7
+   ScaleX 0.361
+   SizeMultiplier 0.2
+   SizeRND 0.1
+   VelAngle 1
+   BillboardingType LockedAxis
+   Velocity 0.1
+   VelocityRND 0.1
+   RandomFrame 1
+   LifeTime 0.1
+   LifeTimeRND 0.05
+   Color {
+    0 1 1 1 1 1 0 0
+   }
+   Alpha {
+    0 1 0.125 1 1 0
+   }
+   Size {
+    0 0 1 1
+   }
+  }
+  EmitorDef sparks_lines {
+   ConeAngle 360 0 40
+   MaxNum 100
+   BirthRate 25
+   LocalTransform 1
+   Material "graphics/particles/materials/fire/sparks_04.emat"
+   ScaleX 0.2
+   ScaleY 1
+   SizeMultiplier 0.01
+   SizeRND 0.1
+   VelAngle 1
+   VelocityRND 0.4
+   VelAffect 0.2
+   GravityMultiply 0.1
+   GravityMultiplyRND 0.5
+   RandomFrame 1
+   LifeTime 0.1
+   LifeTimeRND 0
+   Alpha {
+    0 1 1 0
+   }
+   Size {
+    0 1 1 0
+   }
+  }
+ }
+}

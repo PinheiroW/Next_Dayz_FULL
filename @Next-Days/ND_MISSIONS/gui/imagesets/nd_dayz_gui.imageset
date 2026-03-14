@@ -1,0 +1,68 @@
+ImageSetClass {
+ Name "nd_dayz_gui"
+ RefSize 1024 1024
+ Textures {
+  ImageSetTextureClass {
+   mpix 1
+   path "{CF5F8D9F7D273AAA}ND_MISSIONS/gui/imagesets/nd_dayz_gui.edds"
+  }
+ }
+ Images {
+  ImageSetDefClass geiger {
+   Name "geiger"
+   Pos 0 0
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass radiation {
+   Name "radiation"
+   Pos 200 0
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass shield {
+   Name "shield"
+   Pos 400 0
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass dosimeter {
+   Name "dosimeter"
+   Pos 600 0
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass iconTiredness0 {
+   Name "iconTiredness0"
+   Pos 800 0
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass iconTiredness1 {
+   Name "iconTiredness1"
+   Pos 800 200
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass iconTiredness2 {
+   Name "iconTiredness2"
+   Pos 800 400
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass iconTiredness3 {
+   Name "iconTiredness3"
+   Pos 800 600
+   Size 200 200
+   Flags 0
+  }
+  ImageSetDefClass iconTiredness4 {
+   Name "iconTiredness4"
+   Pos 800 800
+   Size 200 200
+   Flags 0
+  }
+ }
+ Groups {
+ }
+}

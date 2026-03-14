@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<modded_inputs>
+    <inputs>
+        <actions>
+            <input name="UA_ALP_MENU_INFO_PAGES" loc="#STR_menuInfoSites" />
+			<input name="UA_ALP_MENU_INFO_PLAYER" loc="#STR_menuPlayerCharacter" />     
+        </actions>			
+    </inputs>
+    <preset>
+		<input name="UA_ALP_MENU_INFO_PAGES">
+            <btn name="kI">
+            </btn>
+        </input>	
+		<input name="UA_ALP_MENU_INFO_PLAYER">
+            <btn name="kP">
+            </btn>
+        </input>		
+    </preset>	
+</modded_inputs>

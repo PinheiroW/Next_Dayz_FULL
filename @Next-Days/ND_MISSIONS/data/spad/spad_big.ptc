@@ -1,0 +1,42 @@
+EffectDef {
+ Emitors {
+  EmitorDef scape_idea {
+   ShapeType Box
+   ShapeSize 80 40 80
+   MaxNum 600
+   BirthRate 100
+   BirthRateRND 100
+   Offset 0 0 0
+   LocalTransform 0
+   Material "graphics/particles/materials/enviroment/fly_swarm_01.emat"
+   ScaleX 1
+   ScaleY 1
+   SizeMultiplier 6
+   SizeRND 3
+   RandomRotDir 0
+   RotMultiplier 0
+   StretchMultiplier 0
+   StreakFullUV 0
+   VelAngle 0
+   RandomAngle 1
+   Velocity 0
+   VelocityRND 0
+   VelAffect 0
+   AirResistance 0
+   GravityMultiply 0.2
+   GravityMultiplyRND 0.2
+   Spring 0
+   Wind 0
+   AnimFPS 25
+   LifetimeByAnim 0
+   RandomFrame 0
+   LifeTime 6
+   Alpha {
+    0 0 0.12574 0.52532 0.87426 0.48734 1 0
+   }
+   Size {
+    0 1 1 1
+   }
+  }
+ }
+}
