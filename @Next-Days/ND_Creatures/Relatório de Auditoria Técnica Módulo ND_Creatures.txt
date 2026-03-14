@@ -1,0 +1,52 @@
+Relatório de Auditoria Técnica: Módulo ND_Creatures (DayZ)
+
+1. Visão Geral
+Este documento apresenta o resultado da auditoria técnica e refatoração completa do módulo ND_Creatures. O foco principal foi a eliminação de gargalos críticos de processamento (Server FPS), correção de erros de lógica em sistemas de dano/doenças e a modernização da arquitetura para garantir compatibilidade com as versões atuais da Enfusion Engine.
+
+2. Resumo de Alterações por Categoria
+🚀 Performance e Otimização
+Controle de Ciclos (Ticks): No arquivo zombiebase.c, a verificação de portas foi limitada por um timer de 2 segundos. Anteriormente, cada zumbi executava buscas físicas 60 vezes por segundo, o que causava degradação massiva no Server FPS.
+
+Otimização de I/O (Disco): Refatoração do alpCreaturesPlugin.c para utilizar um sistema de Cache na RAM. Os arquivos JSON de configuração agora são lidos apenas uma vez no startup, eliminando micro-travamentos durante o spawn de criaturas.
+
+Matemática de Alta Performance: Substituição da função Distance por DistanceSq no alpPluginNDmissionsSystem.c, reduzindo o custo computacional de raízes quadradas em loops de checagem de zona.
+
+Acesso Direto (Caching): Implementação de cache de instância no alpND.c, eliminando buscas repetitivas em maps e operações de Cast para acessar o plugin de criaturas.
+
+🛡️ Estabilidade e Segurança
+Blindagem Anti-Crash (NPE): Adicionados Null Checks e verificações de Cast em zombiebase.c e PlayerBase.c. O servidor agora está protegido contra quedas quando IAs interagem com objetos não-humanos (veículos, tendas, cercas).
+
+Integridade de Dados: Padronização dos raios de detecção de missões (20.000m) para evitar erros de contagem que causavam vazamento de memória e falhas persistentes no sistema de spawn.
+
+Deleção Segura: Substituição do método de "suicídio" (SetHealth(0)) por deleção silenciosa via ObjectDelete em animais e zumbis que nascem em zonas proibidas, evitando poluição da economia do jogo com corpos desnecessários.
+
+🧬 Gameplay e Lógica de RPG
+Correção de Efeitos: No PlayerBase.c, foi corrigido o erro onde a Radiação era aplicada em vez de Veneno Químico. Agora os escudos de proteção (NBC) funcionam corretamente conforme o tipo de criatura.
+
+Deteção Universal de NBC: Implementada detecção dinâmica baseada em string, tornando o sistema compatível com zumbis NBC de qualquer outro mod sem necessidade de atualizações manuais no código.
+
+3. Detalhamento de Alterações por Arquivo
+alpConstants.c: Encapsulamento de strings em classe estática e adição de suporte a caminhos dinâmicos.
+
+alpCreaturesOptions.c: Correção de erros ortográficos críticos (EnableCretures) e inicialização segura de arrays.
+
+AnimalBase.c: Remoção de lógica pesada de frames e implementação de validação imediata no spawn (EEInit).
+
+zombiebase.c: Refatoração completa da interação com portas e sistema de armadura/dano customizado.
+
+zombiemalebase.c: Limpeza de classes redundantes e centralização da lógica de trajes contaminados.
+
+PlayerBase.c: Correção de multiplicadores de dano e integração correta com os agentes de radiação e químico.
+
+alpCreaturesPlugin.c: Implementação do Singleton Pattern para gerenciamento de configurações JSON.
+
+alpMission.c: Proteção de lado (Server-side only) e correção de sintaxe no sistema de restrição de IA.
+
+alpPluginNDmissionsSystem.c: Otimização matemática e correção de inconsistência de raio em missões globais.
+
+alpND.c: Implementação de acesso rápido ao plugin de criaturas via variável de cache.
+
+4. Conclusão
+O módulo ND_Creatures encontra-se agora em estado de Excelência Técnica. As modificações aplicadas não apenas corrigem bugs existentes, mas preparam o mod para suportar um alto volume de jogadores e entidades sem comprometer a estabilidade do servidor.
+
+Status Final: ✅ Aprovado para Produção.
