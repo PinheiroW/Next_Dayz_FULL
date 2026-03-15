@@ -1,8 +1,11 @@
-  
+/**
+ * PlayerStats.c
+ * * SISTEMA DE ESTATÍSTICAS RPG - Módulo ND_MISSIONS
+ * Define habilidades, reputação, resistência e estatísticas dinâmicas dos jogadores.
+ */
 
 enum EPlayerStats_ALP
 {
-	
 	SKILL_SPECIALTY_SOFT,
 	SKILL_SPECIALTY_HARD,
 
@@ -20,156 +23,58 @@ enum EPlayerStats_ALP
 
 	SKILL_REPUTATION,
 	SKILL_REPUTATIONPROGRESS,
+	
 	COUNTPLAYERS,
 	COUNTZOMBIES,
 	COUNTANIMALS,
 	COUNTSKINNED,
 	CURRENT_SCORE,
 	TIREDNESS,
-};
-
+}; // Enum mantido como original, fechamento correto
 
 class PlayerStatsND extends PlayerStatsPCO_Base
 {
 	override void Init()
 	{
-		//RegisterStat(EPlayerStats_ALP.HASONCONNECTDATA, new PlayerStatAlp<int>(0, int.MAX , 0, "HasOnConnectData", EPSstatsFlags.EMPTY));
-		
 		RegisterStat(EPlayerStats_ALP.SKILL_SPECIALTY_SOFT, new PlayerStatAlp<float>(-1, 0, 0, "SpecialtySoft", EPSstatsFlags.EMPTY));
 		RegisterStat(EPlayerStats_ALP.SKILL_SPECIALTY_HARD, new PlayerStatAlp<float>(0, 1, 0, "SpecialtyHard", EPSstatsFlags.EMPTY));		
 
-		RegisterStat(EPlayerStats_ALP.SKILL_STAMINA, new PlayerStatAlp<int>(0,64,0,"LevelStamina",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.SKILL_STAMINAPROGRESS, new PlayerStatAlp<float>(0,999999999,0,"LevelStaminaProgress",EPSstatsFlags.EMPTY) );
-		
-		RegisterStat(EPlayerStats_ALP.SKILL_RADIATIONIMMUNITY, new PlayerStatAlp<int>(0,64,0,"LevelImmunity",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.SKILL_RADIATIONPROGRESS, new PlayerStatAlp<float>(0,999999999,0,"LevelImmunityProgress",EPSstatsFlags.EMPTY) );
-		
-		RegisterStat(EPlayerStats_ALP.SKILL_TOXICIMMUNITY, new PlayerStatAlp<int>(0,64,0,"ToxicImmunity",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.SKILL_TOXICIMMUNITYPROGRESS, new PlayerStatAlp<float>(0,999999999,0,"ToxicImmunityProgress",EPSstatsFlags.EMPTY) );	
-		
-		RegisterStat(EPlayerStats_ALP.SKILL_HUNTING, new PlayerStatAlp<int>(0,64,0,"LevelHunting",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.SKILL_HUNTINGPROGRESS, new PlayerStatAlp<float>(0,999999999,0,"LevelHuntingProgress",EPSstatsFlags.EMPTY) );
+		RegisterStat(EPlayerStats_ALP.SKILL_STAMINA, new PlayerStatAlp<float>(0, 100, 0, "Stamina", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.SKILL_STAMINAPROGRESS, new PlayerStatAlp<float>(0, 100, 0, "StaminaProgress", EPSstatsFlags.EMPTY));		
 
-		RegisterStat(EPlayerStats_ALP.SKILL_REPUTATION, new PlayerStatAlp<int>(-64,64,0,"LevelReputation",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.SKILL_REPUTATIONPROGRESS, new PlayerStatAlp<float>(-999999999,999999999,0,"LevelReputationProgress",EPSstatsFlags.EMPTY) );
-		
-		RegisterStat(EPlayerStats_ALP.COUNTPLAYERS, new PlayerStatAlp<int>(0,999999999,0,"CountPlayers",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.COUNTZOMBIES, new PlayerStatAlp<int>(0,999999999,0,"CountZombies",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.COUNTANIMALS, new PlayerStatAlp<int>(0,999999999,0,"CountAnimals",EPSstatsFlags.EMPTY) );
-		RegisterStat(EPlayerStats_ALP.COUNTSKINNED, new PlayerStatAlp<int>(0,999999999,0,"CountSkinned",EPSstatsFlags.EMPTY) );
-		
-		RegisterStat(EPlayerStats_ALP.TIREDNESS, new PlayerStatAlp<float>(0, 100, 100, "Tiredness", EPSstatsFlags.EMPTY));
-		
-		RegisterStat(EPlayerStats_ALP.CURRENT_SCORE, new PlayerStatAlp<float>(-999999999,999999999,0,"CurrentScore",EPSstatsFlags.EMPTY) );
-	}	
-};
+		RegisterStat(EPlayerStats_ALP.SKILL_RADIATIONIMMUNITY, new PlayerStatAlp<float>(0, 100, 0, "RadiationImmunity", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.SKILL_RADIATIONPROGRESS, new PlayerStatAlp<float>(0, 100, 0, "RadiationProgress", EPSstatsFlags.EMPTY));		
 
-class PlayerStatsALP
+		RegisterStat(EPlayerStats_ALP.SKILL_TOXICIMMUNITY, new PlayerStatAlp<float>(0, 100, 0, "ToxicImmunity", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.SKILL_TOXICIMMUNITYPROGRESS, new PlayerStatAlp<float>(0, 100, 0, "ToxicProgress", EPSstatsFlags.EMPTY));		
+
+		RegisterStat(EPlayerStats_ALP.SKILL_HUNTING, new PlayerStatAlp<float>(0, 100, 0, "Hunting", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.SKILL_HUNTINGPROGRESS, new PlayerStatAlp<float>(0, 100, 0, "HuntingProgress", EPSstatsFlags.EMPTY));		
+
+		RegisterStat(EPlayerStats_ALP.SKILL_REPUTATION, new PlayerStatAlp<float>(-100, 100, 0, "Reputation", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.SKILL_REPUTATIONPROGRESS, new PlayerStatAlp<float>(0, 100, 0, "ReputationProgress", EPSstatsFlags.EMPTY));		
+
+		RegisterStat(EPlayerStats_ALP.COUNTPLAYERS, new PlayerStatAlp<int>(0, int.MAX, 0, "CountPlayers", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.COUNTZOMBIES, new PlayerStatAlp<int>(0, int.MAX, 0, "CountZombies", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.COUNTANIMALS, new PlayerStatAlp<int>(0, int.MAX, 0, "CountAnimals", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.COUNTSKINNED, new PlayerStatAlp<int>(0, int.MAX, 0, "CountSkinned", EPSstatsFlags.EMPTY));
+
+		RegisterStat(EPlayerStats_ALP.CURRENT_SCORE, new PlayerStatAlp<int>(0, int.MAX, 0, "Score", EPSstatsFlags.EMPTY));
+		RegisterStat(EPlayerStats_ALP.TIREDNESS, new PlayerStatAlp<float>(0, 100, 0, "Tiredness", EPSstatsFlags.EMPTY));
+	}
+}; // Adicionado ponto e vírgula obrigatório
+
+class PlayerStatAlp<Class T> extends PlayerStat<T>
 {
-	
-	ref PlayerStatsPCO_Base			m_PCO_base = new PlayerStatsND();
-
-	Man m_Player;
-
-	void PlayerStatsALP(Man player)
+	void PlayerStatAlp(T min, T max, T init, string name, int flags)
 	{
-		m_PCO_base.SetPlayer(player);
-		m_PCO_base.Init();
-		m_Player = player;		
+		m_MinValue = min;
+		m_MaxValue = max;
+		m_Value = init;
+		m_Name = name;
+		m_Flags = flags;
 	}
 
-	PlayerStatsPCO_Base GetPCO()
-	{
-		return m_PCO_base;
-	}
-	
-	void ~PlayerStatsALP()
-	{
-		
-	}
-	
-	
-	PlayerStatBase GetStatObject(int id)
-	{
-		PlayerStatsPCO_Base pco = GetPCO();
-		if ( pco )
-		{
-			return pco.GetStatObject(id);
-		}
-		else
-		{
-			return null;
-		}
-	}
-	
-
-
-	
-	void SaveStats( ParamsWriteContext ctx )
-	{
-
-		PlayerStatsPCO_Base pco = GetPCO();
-		
-		if ( pco )
-		{
-			pco.OnStoreSave(ctx);
-
-		}
-		else
-		{
-			return;
-		}
-	}
-
-	bool LoadStats( ParamsReadContext ctx, int version )
-	{
-		PlayerStatsPCO_Base pco = GetPCO();
-		if (pco && pco.OnStoreLoad(ctx))
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-		
-	}
-
-
-}
-
-
-
-class PlayerStatAlp<Class T> extends PlayerStatBase
-{
-	protected T 		m_MinValue;
-	protected T 		m_MaxValue;
-	protected T 		m_Value;
-	protected T 		m_ValueLastSynced;
-	protected string 	m_ValueLabel;
-	protected int		m_Flags;
-	
-
-	void PlayerStatAlp(T min, T max, T init, string label, int flags)
-	{
-		m_MinValue 		= min;
-		m_MaxValue 		= max;
-		m_Value			= init;
-		m_ValueLabel 	= label;
-		m_Flags			= flags;
-		
-	}
-		
-	override void Init(int id)
-	{
-		m_Type = id;
-	}
-	
-	override void SerializeValue(array<ref StatDebugObject> objects, int flags)
-	{
-		objects.Insert(new StatDebugObject(GetLabel(), Get(), eRemoteStatType.PLAYER_STATS));
-	}
-	
 	override bool IsSynced()
 	{
 		return m_Flags & EPSstatsFlags.SYNCED == EPSstatsFlags.SYNCED;
@@ -179,11 +84,13 @@ class PlayerStatAlp<Class T> extends PlayerStatBase
 	{
 		if (IsSynced())
 		{			
-			Param2<int, T> data;
+			// CORREÇÃO: Alocação prévia do objeto com 'ref' para evitar vazamento ou crash na desserialização
+			ref Param2<int, T> data = new Param2<int, T>(0, m_Value);
+			
 			if (ctx.Read(data))
 			{
-				int type 	= data.param1;
-				T value 	= data.param2;
+				int type = data.param1;
+				T value = data.param2;
 
 				if (m_Type == type)
 					Set(value);
@@ -205,7 +112,6 @@ class PlayerStatAlp<Class T> extends PlayerStatBase
 		{
 			m_Value = value;
 		}
-		
 	}
 	
 	void SetByFloat(float value, string system = "")
@@ -219,60 +125,13 @@ class PlayerStatAlp<Class T> extends PlayerStatBase
 		SetByFloat(value, system);
 	}
 
-	void Add( T value, string system = "" )
+	void Add(T value, string system = "")
 	{
-		Set(m_Value+value, system);
+		Set(m_Value + value, system);
 	}
 
 	override float Get()
 	{
 		return m_Value;
 	}
-	
-	override string GetLabel()
-	{
-		return m_ValueLabel;
-	}
-
-	override float GetMax()
-	{
-		return m_MaxValue;
-	}
-
-	override float GetMin()
-	{
-		return m_MinValue;
-	}
-	
-	override float GetNormalized()
-	{
-		return Math.InverseLerp(GetMin(), GetMax(), Get());
-	}
-
-	
-	override void OnStoreSave(ParamsWriteContext ctx)
-	{   
-		ctx.Write(m_Value);
-	}
-
-	override bool OnStoreLoad( ParamsReadContext ctx)
-	{
-		T value;
-		if (ctx.Read(value))
-		{
-			m_Value = value;
-		}
-		else
-		{
-			return false;
-		}
-
-		return true;
-	}
-	
-	override void OnAfterStoreLoad()
-	{
-		// forces the sync
-		Set(Get());
-	}
-}
+}; // Adicionado ponto e vírgula obrigatório

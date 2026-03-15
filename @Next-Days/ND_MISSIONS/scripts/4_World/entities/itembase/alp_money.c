@@ -1,95 +1,85 @@
+/**
+ * alp_money.c
+ * * ENTIDADE DE ECONOMIA (DINHEIRO E MOEDAS) - Módulo ND_MISSIONS
+ * Gerencia valores nominais, formatação visual e propriedades físicas do dinheiro.
+ */
+
 class alp_Cash extends Inventory_Base
 {
+	/**
+	 * Obtém o valor individual da nota/moeda definido no Config.cpp.
+	 */
 	int GetMoneyValue()
 	{
 		int value = 1;
-		
 		string subclass_path = "CfgVehicles " + GetType() + " nominalValue";
-		value = GetGame().ConfigGetInt(subclass_path);
+		
+		if (GetGame().ConfigIsExisting(subclass_path))
+			value = GetGame().ConfigGetInt(subclass_path);
 		
 		return value;
 	}			
+
+	/**
+	 * Calcula o valor total do stack (quantidade * valor nominal).
+	 */
 	int GetMonyeSum()
 	{	
-		if (GetQuantity()>0)
-		{
-		 	return GetMoneyValue() * GetQuantity();
-		}
-		else 
-		{
-			return GetMoneyValue();
-		}
-	
+		if (GetQuantity() > 0)
+			return GetMoneyValue() * GetQuantity();
+		
+		return GetMoneyValue();
 	}
 	
 	override string GetDisplayName()
 	{
-		string sdt = super.GetDisplayName();
-		return FormatNumber(GetMonyeSum()) + " " + sdt;
+		return FormatNumber(GetMonyeSum()) + " " + super.GetDisplayName();
 	}
 	
+	/**
+	 * Formata números grandes para facilitar a leitura (ex: 10000 -> 10 000).
+	 */
 	string FormatNumber(float value)
 	{		
-		int 			v 		= value;		
-		string 			text 	= v.ToString();
-		int 			len 	= text.Length();
-		string 			output  = "";
-		int				s=0;
-		len -=1;
-		for (int i=len; i>=0;i--){
-			
-			if (s==3 || s==6 || s==9){
+		int v = value;		
+		string text = v.ToString();
+		string output = "";
+		int len = text.Length();
+		int count = 0;
+
+		for (int i = len - 1; i >= 0; i--)
+		{
+			if (count > 0 && count % 3 == 0)
 				output = text.Get(i) + " " + output;
-			}
-			else output = text.Get(i) + output;
-			s++;
+			else 
+				output = text.Get(i) + output;
+			count++;
 		}
 		return output;
-	}	
-/*	
-	int GetCurrencyType()
-	{
-		return 0;
 	}
-*/
-}
 
-class alp_Coin extends alp_Cash{}
+	// --- Lógica de Combustível/Fogo ---
 
-class alp_Money extends alp_Cash
-{
-	//================================================================
-	// IGNITION ACTION
-	//================================================================
-	override bool HasFlammableMaterial()
+	override bool IsKindling() { return true; }
+	override bool IsFuel() { return false; }
+	override bool CanIgniteItem(EntityAI ignite_target = NULL) { return false; }
+	override bool IsTargetFlammable(ItemBase target) { return false; }
+	
+	override bool CanBeIgnitedBy(EntityAI igniter = NULL)
 	{
+		// Só pode queimar se estiver fora de containers
+		if (GetHierarchyParent()) return false;
 		return true;
 	}
 	
-	override bool CanBeIgnitedBy( EntityAI igniter = NULL )
+	override void OnIgnitedThis(EntityAI fire_source)
 	{
-		if ( GetHierarchyParent() ) return false;
-		
-		return true;
-	}
-	
-	override bool CanIgniteItem( EntityAI ignite_target = NULL )
-	{
-		return false;
-	}
-	
-	override void OnIgnitedTarget( EntityAI ignited_item )
-	{
-	}
-	
-	override void OnIgnitedThis( EntityAI fire_source )
-	{
-		Fireplace.IgniteEntityAsFireplace( this, fire_source );
+		Fireplace.IgniteEntityAsFireplace(this, fire_source);
 	}
 
-	override bool IsThisIgnitionSuccessful( EntityAI item_source = NULL )
+	override bool IsThisIgnitionSuccessful(EntityAI item_source = NULL)
 	{
-		return Fireplace.CanIgniteEntityAsFireplace( this );
+		return Fireplace.CanIgniteEntityAsFireplace(this);
 	}
 	
 	override void SetActions()
@@ -101,28 +91,24 @@ class alp_Money extends alp_Cash
 		AddAction(ActionAttach);
 		AddAction(ActionDetach);
 	}	
-	
 }
 
+// --- Definições de Classes Específicas ---
+
+class alp_Money : alp_Cash {} // Base para notas de papel
+class alp_Coin  : alp_Cash {} // Base para moedas metálicas
+
+// Moedas
 class alp_CoinRare1 extends alp_Coin {}
-class alp_Coin1 extends alp_Coin {}
-class alp_Coin2 extends alp_Coin {}
-class alp_Coin5 extends alp_Coin {}
+class alp_Coin1     extends alp_Coin {}
+class alp_Coin2     extends alp_Coin {}
+class alp_Coin5     extends alp_Coin {}
 
-class alp_Money10 extends alp_Money {}
-class alp_Money20 extends alp_Money{}
-class alp_Money50 extends alp_Money{}
-class alp_Money100 extends alp_Money{}
-class alp_Money500 extends alp_Money{}
-class alp_Money1000 extends alp_Money{}
-
-
-class alp_USD1 extends alp_Money{}
-
-class alp_USD5 extends alp_Money{}
-class alp_USD10 extends alp_Money{}
-class alp_USD20 extends alp_Money{}
-class alp_USD50 extends alp_Money{}
-class alp_USD100 extends alp_Money{}
-class alp_USD500 extends alp_Money{}
-class alp_USD1000 extends alp_Money{}
+// Notas
+class alp_Money10   extends alp_Money {}
+class alp_Money20   extends alp_Money {}
+class alp_Money50   extends alp_Money {}
+class alp_Money100  extends alp_Money {}
+class alp_Money200  extends alp_Money {}
+class alp_Money500  extends alp_Money {}
+class alp_Money1000 extends alp_Money {}

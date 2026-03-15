@@ -1,56 +1,70 @@
+/**
+ * playeragentpool.c
+ * * GERENCIADOR DE AGENTES DE DOENÇA DO JOGADOR - Módulo ND_MISSIONS
+ * Controla a injeção de agentes de radiação e químicos, aplicando resistências RPG naturais.
+ */
 
 modded class PlayerAgentPool
 {
-
 	override void AddAgent(int agent_id, float count)
 	{
 		int max_count = m_PluginTransmissionAgents.GetAgentMaxCount(agent_id);
 		
-		if ( count > 0 )
+		if (count > 0)
 		{			
-			
 			float resistance;
-			switch (agent_id)
+			
+			// OTIMIZAÇÃO E SEGURANÇA: Verificação em cascata para evitar Null Pointer Exception
+			if (m_Player && m_Player.GetRP() && m_Player.GetRP().GetProtection())
 			{
-				case alpeAgents.RADIATION:
+				switch (agent_id)
 				{
-					
-					resistance =  m_Player.GetRP().GetProtection().GetNaturalResistanceAgainstRadiation();
-					//Print("COUNT " + count);
-					count = count - count * resistance;
-					if ( count > 0 )
+					case alpeAgents.RADIATION:
 					{
-						//Print("COUNT " + count);
+						resistance = m_Player.GetRP().GetProtection().GetNaturalResistanceAgainstRadiation();
 						
-						m_Player.GetRP().ImproveRadiationNaturalResistance( count );
+						// Reduz a dose de radiação baseada na resistência RPG (Imunidade passiva)
+						count = count - (count * resistance);
+						
+						if (count > 0)
+						{
+							// LÓGICA MANTIDA: Evolui progressivamente a habilidade de imunidade à radiação
+							m_Player.GetRP().ImproveRadiationNaturalResistance(count);
+						}
+						break;
 					}
-					break;
-				}
-				case eAgents.CHEMICAL_POISON:
-				{
-					resistance =  m_Player.GetRP().GetProtection().GetNaturalResistanceAgainstChemical();
-					count = count - count * resistance;
-					if ( count > 0 )
+					case eAgents.CHEMICAL_POISON:
 					{
-						m_Player.GetRP().ImproveToxicNaturalResistance( count );
-					}					
-					break;
-				}		
+						resistance = m_Player.GetRP().GetProtection().GetNaturalResistanceAgainstChemical();
+						
+						// Reduz a dose do veneno químico baseada na resistência RPG
+						count = count - (count * resistance);
+						
+						if (count > 0)
+						{
+							// LÓGICA MANTIDA: Evolui progressivamente a habilidade de resistência química
+							m_Player.GetRP().ImproveToxicNaturalResistance(count);
+						}					
+						break;
+					}		
+				}
 			}
 		}
 				
-		
-		if(	!m_VirusPool.Contains(agent_id) && count > 0 )//if it contains, maybe add count only ?
+		// LÓGICA MANTIDA E OTIMIZADA: Processamento de inserção ou atualização de valores da doença
+		if (!m_VirusPool.Contains(agent_id))
 		{
-			//m_VirusPool.Insert( agent_id, Math.Clamp(count,0,max_count) );
-			SetAgentCount(agent_id,count);
+			// Só insere um novo agente no sistema se após resistir ainda houver contaminação
+			if (count > 0)
+			{
+				SetAgentCount(agent_id, count);
+			}
 		}
 		else
 		{
+			// Se já possui a doença, soma a contaminação existente com a nova dose (mesmo que 0)
 			float new_value = m_VirusPool.Get(agent_id) + count;
-			//Print(new_value);
-			SetAgentCount(agent_id,new_value);
+			SetAgentCount(agent_id, new_value);
 		}
 	}
-
-}
+}; // Adicionado ponto e vírgula obrigatório

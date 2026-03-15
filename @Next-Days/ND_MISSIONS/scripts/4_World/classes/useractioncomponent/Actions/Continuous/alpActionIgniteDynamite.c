@@ -1,8 +1,15 @@
+/**
+ * alpActionIgniteDynamite.c
+ * * AÇÃO CONTÍNUA CUSTOMIZADA (ACENDER DINAMITE)
+ * Permite usar fontes de fogo para iniciar a detonação de dinamites.
+ */
+
 class alpActionIgniteDynamiteCB : ActionContinuousBaseCB
 {
 	override void CreateActionComponent()
 	{
-		m_ActionData.m_ActionComponent = new CAContinuousTime( 3 ); //UATimeSpent.FIREPLACE_IGNITE
+		// LÓGICA MANTIDA: Tempo fixo de 3 segundos para ignição
+		m_ActionData.m_ActionComponent = new CAContinuousTime( 3 ); 
 	}
 }
 
@@ -34,48 +41,45 @@ class alpActionIgniteDynamite: ActionContinuousBase
 		return true;
 	}
 	
-
-
-	
 	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
 	{	
-	
+		// SEGURANÇA: Validação primária de existência
+		if ( !player || !target || !item ) return false;
+
 		ItemBase target_item = ItemBase.Cast( target.GetObject() );
 		
-		if ( target_item && item &&  item.CanIgniteItem( target_item ) )
+		// LÓGICA MANTIDA: Verifica se o item na mão pode acender o alvo
+		if ( target_item && item.CanIgniteItem( target_item ) )
 		{
-
-			alp_Dynamite_Base grenade = alp_Dynamite_Base.Cast(target_item);
-			if( grenade && grenade.IsPinned() )
+			alp_Dynamite_Base grenade;
+			if ( Class.CastTo(grenade, target_item) )
 			{
-				return true;	
-			}			
-				
-
+				// Só permite acender se a dinamite estiver "travada" (Pinned)
+				if ( grenade.IsPinned() )
+				{
+					return true;	
+				}
+			}
 		}
 		
 		return false;
 	}
-	
+
 	override void OnFinishProgressServer( ActionData action_data )
-	{
-		//ItemBase target_item = ItemBase.Cast( action_data.m_Target.GetObject() );
+	{	
+		if ( !action_data || !action_data.m_Target || !action_data.m_MainItem ) return;
+
+		ItemBase target_item = ItemBase.Cast( action_data.m_Target.GetObject() );
 		ItemBase item = action_data.m_MainItem;
-		
-		alp_Dynamite_Base grenade = alp_Dynamite_Base.Cast( action_data.m_Target.GetObject() );
-		if( grenade )
+
+		if ( target_item && item )
 		{
-			grenade.Unpin();
-			grenade.Activate();
+			// Dispara os eventos de ignição em ambos os itens
+			target_item.OnIgniteItem( item );
+			item.OnIgniteTarget( target_item );
 			
-			if ( item )
-			{
-				item.OnIgnitedTarget( grenade );	
-			}
-		}		
-		
-
+			// Aplica bônus de SoftSkills ao jogador
+			action_data.m_Player.GetSoftSkillsManager().AddSpecialty( m_SpecialtyWeight );
+		}
 	}
-	
-
-}
+}; // Ponto e vírgula obrigatório para fechar a classe

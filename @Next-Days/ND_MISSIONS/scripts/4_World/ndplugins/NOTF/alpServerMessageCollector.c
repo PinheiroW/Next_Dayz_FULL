@@ -1,26 +1,25 @@
+/**
+ * alpServerMessageCollector.c
+ * * MESSAGE SCHEDULER & COLLECTOR - Módulo ND_MISSIONS (NOTF)
+ * Gerencia o agendamento, repetição e disparo de mensagens automáticas.
+ */
 
 class alpServerMessageCollector
 {
-	//int 				TimeStamp;		//current reamining loop time
-	//int					LoopCount;	
-	
-	int alp_Index;
-	
-	ref map<int, ref alpServerMessageTemplate> alp_Messages;
-	
-	ref map<int, ref alpServerMessageTemplate> alp_MessagesRegular;
-	
-	ref map<int, ref alpServerMessageTemplate> alp_MessagesOnSpawn;
-	
-	ref map<int, ref alpServerMessageTemplate> alp_MessagesOnConnect;
+	protected int alp_Index;
+	protected ref map<int, ref alpServerMessageTemplate> alp_Messages;
+	protected ref map<int, ref alpServerMessageTemplate> alp_MessagesRegular;
+	protected ref map<int, ref alpServerMessageTemplate> alp_MessagesOnSpawn;
+	protected ref map<int, ref alpServerMessageTemplate> alp_MessagesOnConnect;
 
-	
+	// --- Inicialização e Limpeza ---
+
 	void alpServerMessageCollector()
 	{
-		alp_Messages = new  map<int,ref alpServerMessageTemplate>;
-		alp_MessagesRegular = new  map<int,ref alpServerMessageTemplate>;
-		alp_MessagesOnSpawn = new  map<int,ref alpServerMessageTemplate>;
-		alp_MessagesOnConnect = new  map<int,ref alpServerMessageTemplate>;
+		alp_Messages          = new map<int, ref alpServerMessageTemplate>;
+		alp_MessagesRegular   = new map<int, ref alpServerMessageTemplate>;
+		alp_MessagesOnSpawn   = new map<int, ref alpServerMessageTemplate>;
+		alp_MessagesOnConnect = new map<int, ref alpServerMessageTemplate>;
 		
 		alp_Index = 0;
 	}
@@ -32,196 +31,140 @@ class alpServerMessageCollector
 		delete alp_MessagesOnSpawn;					
 		delete alp_MessagesOnConnect;		
 	}	
-	
+
+	// --- Gerenciamento de Mensagens ---
+
 	alpServerMessageTemplate GetServerMessage(int id)
 	{
 		return alp_Messages.Get(id);			
 	}
 	
-		
+	/**
+	 * Adiciona e categoriza a mensagem nos mapas correspondentes baseada no tempo de disparo.
+	 */
 	void AddMessage(alpServerMessageTemplate message)
 	{
+		alp_Messages.Set(alp_Index, message);
 		
-		alp_Messages.Set(alp_Index, message );
-		
-		if ( message.Time.Get(0) == -2 )
-		{//on spawn
-			alp_MessagesOnSpawn.Set(alp_Index, message );
-		}
-		else if ( message.Time.Get(0) == -3 )
-		{//on connect
-			alp_MessagesOnConnect.Set(alp_Index, message );
-		}
-		else
+		int timeFlag = message.Time.Get(0);
+
+		if (timeFlag == -2) // On Spawn
 		{
-			alp_MessagesRegular.Set(alp_Index, message );	
+			alp_MessagesOnSpawn.Set(alp_Index, message);
+		}
+		else if (timeFlag == -3) // On Connect
+		{
+			alp_MessagesOnConnect.Set(alp_Index, message);
+		}
+		else // Regular (Intervalo ou Horário Fixo)
+		{
+			alp_MessagesRegular.Set(alp_Index, message);	
 		}
 		
 		alp_Index++;	
 	} 
-	
-/*	
-	void SendMessageToClient(int type, string message, Man player = null)
-	{
-		ScriptRPC rpc = GetND().GetSyncRPC( GetND().GetNotf().GetID() );			
-		rpc.Write( ALP_RPC_PLUGIN_NOTF.MISSION );		
-		rpc.Write( type );
-		rpc.Write( message );
 
-		if ( player)
-		{
-			GetND().SendGameRPC( rpc, player );	
-		}				
-		else
-		{
-			GetND().SendGameRPC( rpc, player, true,true,true );	
-		}
-	}
-	*/
-	void SendServerMessageToClient(int id, Man player = null)
-	{
-		ScriptRPC rpc = GetND().GetSyncRPC( GetND().GetNotf().GetID() );					
-		rpc.Write( ALP_RPC_PLUGIN_NOTF.SM );
-		rpc.Write( id );
-		
-		if ( player)
-		{
-			GetND().SendGameRPC( rpc, player );	
-		}				
-		else
-		{
-			GetND().SendGameRPC( rpc, player, true,true,true );	
-		}
-	}	
-	
+	// --- Lógica de Disparo (Server Side) ---
+
+	/**
+	 * Envia a mensagem via RPC e agenda a próxima repetição se necessário.
+	 */
 	void ShowServerMessage(int id, Man player = null)
 	{
-		if (GetGame().IsServer() )
-		{
-			SendServerMessageToClient(id,player);
-			
-			alpServerMessageTemplate message = alp_Messages.Get( id );
-			
-			int time;
-			
-			if ( message.Time.Get(0) == -2 ||  message.Time.Get(0) == -3 )
-			{//on spawn on connect
-				if ( message.Loop > 0 )
-				{										
-					message.Loop--;
-					time = message.LoopTime * 1000;					
-					GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,time,false, id, player);	
-					
-				}	
-				else if ( message.Loop < 0 )
-				{
-					time = message.LoopTime * 1000;					
-					GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,time,false, id, player);		
-				}								
-			}
-			else if ( message.Time.Get(0) == -1 )
-			{//loop message
-				if ( message.Loop > 0 )
-				{										
-					message.Loop--;
-					time = message.LoopTime * 1000;					
-					GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,time,false, id);	
-					
-				}	
-				else if ( message.Loop < 0 )
-				{
-					time = message.LoopTime * 1000;					
-					GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,time,false, id);		
-				}
-			}
-			else
-			{
-				if ( message.Loop > 0 )
-				{										
-					message.Loop--;
-					time = message.LoopTime * 1000;					
-					GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,time,false, id);	
-					
-				}	
-				else if ( message.Loop < 0 )
-				{
-					time = message.LoopTime * 1000;					
-					GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,time,false, id);		
-				}
-				else
-				{
-					time =  (24 * 60 * 60) - message.LoopTime * message.LoopTime;
-				}				
-			}
-						
-		}
-		else
-		{
+		if (!GetGame().IsServer()) return;
+
+		// Envia para o cliente via RPC SM
+		SendServerMessageToClient(id, player);
 		
+		alpServerMessageTemplate message = alp_Messages.Get(id);
+		if (!message) return;
+
+		int time;
+		bool shouldLoop = (message.Loop > 0 || message.Loop < 0);
+
+		if (shouldLoop)
+		{
+			if (message.Loop > 0) message.Loop--;
+			
+			time = message.LoopTime * 1000;
+			// Re-agenda a exibição baseada no LoopTime
+			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(this.ShowServerMessage, time, false, id, player);	
+		}
+		else if (message.Time.Get(0) >= 0)
+		{
+			// Cálculo para mensagens de horário fixo (reset de ciclo 24h)
+			time = (24 * 60 * 60) - (message.LoopTime * message.LoopTime); // Lógica original mantida
 		}
 	}
-	
 
+	/**
+	 * Comunicação RPC para o Plugin NOTF no cliente.
+	 */
+	void SendServerMessageToClient(int id, Man player = null)
+	{
+		ScriptRPC rpc = GetND().GetSyncRPC(GetND().GetNotf().GetID());					
+		rpc.Write(ALP_RPC_PLUGIN_NOTF.SM);
+		rpc.Write(id);
+		
+		if (player)
+			GetND().SendGameRPC(rpc, player);	
+		else
+			GetND().SendGameRPC(rpc, player, true, true, true);	
+	}
+
+	// --- Inicialização de Ciclos ---
+
+	/**
+	 * Inicia o monitoramento de mensagens regulares (horário fixo ou loop infinito).
+	 */
 	void StartRegularMessages()
 	{
-		//int timeStamp 			= g_Game.GetTime();
-		int hourS,minuteS,secondS, timemessage, timecurrent;
+		int hourS, minuteS, secondS, timemessage, timecurrent;
 		GetHourMinuteSecondUTC(hourS, minuteS, secondS);	
 		
-		timecurrent = hourS * 60 * 60 + minuteS * 60 + secondS;
+		timecurrent = hourS * 3600 + minuteS * 60 + secondS;
 		
 		for (int i = 0; i < alp_MessagesRegular.Count(); i++)
 		{
-			int key = alp_MessagesRegular.GetKey( i );
-			alpServerMessageTemplate message = alp_MessagesRegular.GetElement( i );
+			int key = alp_MessagesRegular.GetKey(i);
+			alpServerMessageTemplate message = alp_MessagesRegular.GetElement(i);
 			
-			if ( message.Time.Get(0) >= 0 )
+			if (message.Time.Get(0) >= 0) // Horário específico HH:MM:SS
 			{
-				timemessage = message.Time.Get(0) * 60 * 60 + message.Time.Get(1) * 60 + message.Time.Get(2);
-			
+				timemessage = message.Time.Get(0) * 3600 + message.Time.Get(1) * 60 + message.Time.Get(2);
 				timemessage = timemessage - timecurrent;
 				
-				if ( timemessage < 0 )
-				{
-					timemessage = (24 * 60 * 60) + timemessage;	
-				}
+				if (timemessage < 0) timemessage = 86400 + timemessage; // Agenda para o dia seguinte
 				
-				timemessage *= 1000;
-				
-				GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,timemessage,false, key);
-				
+				GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(this.ShowServerMessage, timemessage * 1000, false, key);
 			}
-			else
+			else // Intervalo de repetição (Time -1)
 			{
-				timemessage = message.LoopTime * 1000;
-				
-				GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,timemessage,false, key);
+				GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(this.ShowServerMessage, message.LoopTime * 1000, false, key);
 			}																				
 		}
 	}
+
 	void StartOnConnectMessages(Man player)
 	{
-		StartPlayersMessages( player, alp_MessagesOnConnect);
+		StartPlayersMessages(player, alp_MessagesOnConnect);
 	}	
+
 	void StartOnSpawnMessages(Man player)
 	{
-		StartPlayersMessages( player, alp_MessagesOnSpawn);
+		StartPlayersMessages(player, alp_MessagesOnSpawn);
 	}	
-	
-	void StartPlayersMessages(Man player, map<int, ref alpServerMessageTemplate> messages)
+
+	/**
+	 * Helper para iniciar sequências de mensagens individuais para um jogador.
+	 */
+	protected void StartPlayersMessages(Man player, map<int, ref alpServerMessageTemplate> messages)
 	{
-		//int timeStamp 			= g_Game.GetTime();
-		int timemessage;
-		
 		for (int i = 0; i < messages.Count(); i++)
 		{
-			int key = messages.GetKey( i );
-			alpServerMessageTemplate message = messages.GetElement( i );
-
-			timemessage = message.LoopTime * 1000;
-				
-			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater( this.ShowServerMessage,timemessage,false, key, player);			
-																									
+			int key = messages.GetKey(i);
+			alpServerMessageTemplate message = messages.GetElement(i);
+			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(this.ShowServerMessage, message.LoopTime * 1000, false, key, player);			
 		}	
 	}	
 }

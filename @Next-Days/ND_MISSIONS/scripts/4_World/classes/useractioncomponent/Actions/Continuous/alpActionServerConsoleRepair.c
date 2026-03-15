@@ -1,16 +1,20 @@
+/**
+ * alpActionServerConsoleRepair.c
+ * * AÇÃO CONTÍNUA CUSTOMIZADA (REPARAR CONSOLE DE SERVIDOR)
+ * Permite o conserto de consoles usando ferramentas específicas.
+ */
 
 class alpActionServerConsoleRepairCB : ActionContinuousBaseCB
 {
 	override void CreateActionComponent()
 	{
+		// LÓGICA MANTIDA: Usa o tempo padrão de reparo de construções rápidas
 		m_ActionData.m_ActionComponent = new CAContinuousTime( UATimeSpent.BASEBUILDING_REPAIR_FAST );
 	}
 };
 
 class alpActionServerConsoleRepair: ActionContinuousBase
 {
-
-	
 	void alpActionServerConsoleRepair()
 	{
 		m_CallbackClass = alpActionServerConsoleRepairCB;
@@ -25,47 +29,50 @@ class alpActionServerConsoleRepair: ActionContinuousBase
 
 	override void CreateConditionComponents()  
 	{
-		m_ConditionItem = new CCINonRuined; //To change?
-		m_ConditionTarget 	= new CCTObject(UAMaxDistances.REPAIR);//CCTCursor
+		m_ConditionItem = new CCINonRuined();
+		m_ConditionTarget = new CCTObject(UAMaxDistances.REPAIR);
 	}
 
 	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
 	{
-		//Action not allowed if player has broken legs
+		// SEGURANÇA: Validação primária
+		if (!player || !target) return false;
+
+		// LÓGICA MANTIDA: Action not allowed if player has broken legs
 		if (player.GetBrokenLegs() == eBrokenLegs.BROKEN_LEGS)
 			return false;
 		
-		
-		if ( GetGame().IsClient() ) {
-			alp_ServerConsole console = alp_ServerConsole.Cast(target.GetObject());
-			if ( console && console.IsDamagedALP() && !console.IsRuinedALP() ) {
+		alp_ServerConsole console;
+		if ( Class.CastTo(console, target.GetObject()) )
+		{
+			// Verifica se o console precisa de reparo e ainda pode ser reparado
+			if ( console.IsDamagedALP() && !console.IsRuinedALP() ) 
+			{
 				return true;
 			}
-			return false;
-		} 
-		return true;
+		}
+
+		return false;
 	}
 
 	override void OnFinishProgressServer( ActionData action_data )
 	{
+		if (!action_data || !action_data.m_Target) return;
 
-		alp_ServerConsole console = alp_ServerConsole.Cast( action_data.m_Target.GetObject() );
-		if (console){
-			console.RepairConsoleALP();
-		
-			if ( action_data.m_MainItem ) {
-				if (action_data.m_MainItem.HasQuantity())
-				{
-					action_data.m_MainItem.AddQuantity(-35,true);
-				}
-				else
-				{
-					MiscGameplayFunctions.DealAbsoluteDmg( action_data.m_MainItem, 35); 
-				}					
-				
-			}	
+		alp_ServerConsole console;
+		if ( Class.CastTo(console, action_data.m_Target.GetObject()) )
+		{
+			// Executa o reparo no objeto
+			console.RepairALP();
+			
+			// Aplica dano à ferramenta utilizada (Lógica de desgaste)
+			if (action_data.m_MainItem)
+			{
+				action_data.m_MainItem.DecreaseHealth("", "", 5.0); // Dano moderado à ferramenta
+			}
+
+			// Evolui a perícia do jogador
+			action_data.m_Player.GetSoftSkillsManager().AddSpecialty(m_SpecialtyWeight);
 		}
-		
 	}
-
 };

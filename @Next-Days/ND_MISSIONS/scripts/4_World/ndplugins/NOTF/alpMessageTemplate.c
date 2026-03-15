@@ -1,19 +1,27 @@
+/**
+ * alpMessageTemplate.c
+ * * NOTIFICATION TEMPLATE - Módulo ND_MISSIONS (NOTF)
+ * Define a estrutura para mensagens automáticas e agendadas do servidor.
+ */
+
 class alpServerMessageTemplate 
 {
-	int 				Type;					//0-1 server message, 2 personal message sending player OnConnect event
-	string				Message;				//message
-	ref array<int>		Time = new array<int>;	//HH:MM:SS
-	int					Loop		= 0;		//count of loop, -1 = infinity, 0 = just once, x = x+1 loops
-	int					LoopTime	= 0;		//time beetween loops
-	
-	
+	int            Type;      // 0-1: Mensagem global do servidor, 2: Mensagem pessoal (OnConnect)
+	string         Message;   // Texto da mensagem
+	ref array<int> Time;      // Horário de execução: [HH, MM, SS]
+	int            Loop;      // Contador de loops: -1 (infinito), 0 (uma vez), X (X+1 vezes)
+	int            LoopTime;  // Tempo de espera entre cada repetição
+
+	/**
+	 * Construtor da classe de template de mensagem.
+	 * Inicializa os parâmetros de texto, tempo e repetição.
+	 */
 	void alpServerMessageTemplate(int type, string text, ref array<int> time, int loop, int looptime)
 	{
-		Type=type;
-		Message=text;
-		Time=time;
-		Loop=loop;
-		LoopTime=looptime;
+		Type     = type;
+		Message  = text;
+		Time     = time;
+		Loop     = loop;
+		LoopTime = looptime;
 	}
 }
-

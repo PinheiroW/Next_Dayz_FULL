@@ -1,5 +1,9 @@
+/**
+ * alpActionStartMission.c
+ * * AÇÃO DE INTERAÇÃO (INICIAR MISSÃO COM NPC) - Módulo ND_MISSIONS
+ * Gerencia o início de diálogos e triggers de missões através de NPCs.
+ */
 
-// Script File
 class alpActionStartMission: ActionInteractBase
 {
 	string alp_Title;
@@ -13,11 +17,11 @@ class alpActionStartMission: ActionInteractBase
 	
 	override void CreateConditionComponents()  
 	{
+		// CCTMan define que o alvo deve ser um ser humano/NPC a uma distância padrão
 		m_ConditionTarget = new CCTMan(UAMaxDistances.DEFAULT);
 		m_ConditionItem = new CCINone;
 	}
 
-	string alp_WantedItemName;
 	override string GetText()
 	{
 		return alp_Title;
@@ -25,57 +29,63 @@ class alpActionStartMission: ActionInteractBase
 
 	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
 	{
+		if ( !target || !target.GetObject() ) return false;
 
-		if ( GetGame().IsClient() )
+		alpNPC ntarget;
+		if ( Class.CastTo(ntarget, target.GetObject()) )
 		{
-			alpNPC ntarget = alpNPC.Cast(  target.GetObject() );
-			//Print("NPC " + ntarget.alp_MissionTriggerSetting + " mise " + ntarget.alp_MissionManaged);
+			// Verifica se o NPC está habilitado para missões, vivo, em pé e se o player tem permissão (ex: cooldown)
 			int actionType = ntarget.GetTypeOfManagedMissionAction();
-			if( ntarget &&  ntarget.IsSetSettingALP(alpMISSIONTRIGGER.ENABLED) && ntarget.IsAlive() && ntarget.IsErectedALP() && ntarget.CanSpeakWithMe(player) && actionType )
-			{
 			
-				SetTextALP( actionType, ntarget.IsSwapedActionTitle() );
-				return true;
-			}		
-			return false;
+			if ( ntarget.IsSetSettingALP(alpMISSIONTRIGGER.ENABLED) && ntarget.IsAlive() && ntarget.IsErectedALP() )
+			{
+				if ( ntarget.CanSpeakWithMe(player) && actionType != 0 )
+				{
+					// Lado do Cliente: Define o texto do HUD dinamicamente
+					if ( GetGame().IsClient() )
+					{
+						SetTextALP( actionType, ntarget.IsSwapedActionTitle() );
+					}
+					return true;
+				}
+			}
 		}
-		return true;
+		
+		return false;
 	}
 	
-	
-	void SetTextALP(int action, bool swapedTitle) {
-		if ( !swapedTitle ){
-			if ( action == 1 ) {
-				alp_Title = "#alp_action_npc_talk";
-			} else {
-				alp_Title = "#alp_action_npc_talkagain";	
-			}
-		} else {
-			if ( action == 1 ) {
+	/**
+	 * Define o texto baseado no estado da missão:
+	 * action == 1: Primeiro contato ("Falar")
+	 * action == 2: Contatos subsequentes ("Falar Novamente")
+	 */
+	void SetTextALP(int action, bool swapedTitle) 
+	{
+		// Lógica base
+		if ( action == 1 ) 
+			alp_Title = "#alp_action_npc_talk";
+		else 
+			alp_Title = "#alp_action_npc_talkagain";
+		
+		// Inverte o título se a configuração do NPC assim exigir
+		if ( swapedTitle ) 
+		{
+			if ( alp_Title == "#alp_action_npc_talk" ) 
 				alp_Title = "#alp_action_npc_talkagain";
-			} else {
-				alp_Title = "#alp_action_npc_talk";	
-			}			
+			else 
+				alp_Title = "#alp_action_npc_talk";
 		}
 	}
 
-	
 	override void OnExecuteServer( ActionData action_data )
 	{
-		alpNPC npc = alpNPC.Cast( action_data.m_Target.GetObject() );
-		
-		if (npc){
-			npc.MakeReadyMissionAction(action_data.m_Player);	
+		if ( !action_data || !action_data.m_Target ) return;
 
-			if ( !npc.alp_RewardWasGiven && npc.alp_GiveItemWhenActivate != "" ) {
-					
-				GetGame().CreateObjectEx(npc.alp_GiveItemWhenActivate, npc.GetPosition() + ( npc.GetDirection() * 0.5 ), ECE_PLACE_ON_SURFACE);	
-					
-				npc.alp_RewardWasGiven == true;
-				
-			}
-		}	
+		alpNPC ntarget;
+		if ( Class.CastTo(ntarget, action_data.m_Target.GetObject()) )
+		{
+			// Dispara a lógica de missão no servidor (pode abrir menus, spawnar itens ou atualizar o DB)
+			ntarget.ManageMissionAction();
+		}
 	}
-
-
-}
+};

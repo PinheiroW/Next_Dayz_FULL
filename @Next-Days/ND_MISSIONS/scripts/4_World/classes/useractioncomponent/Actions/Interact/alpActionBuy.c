@@ -1,6 +1,11 @@
+/**
+ * alpActionBuy.c
+ * * AÇÃO DE INTERAÇÃO (ABRIR TRADER) - Módulo ND_MISSIONS
+ * Gerencia a abertura do menu de compra e sincronização de estoque com NPCs.
+ */
+
 class alpActionBuy: ActionInteractBase
 {
-
 	void alpActionBuy()
 	{
 		m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
@@ -10,10 +15,10 @@ class alpActionBuy: ActionInteractBase
 	
 	override void CreateConditionComponents()  
 	{
-		m_ConditionTarget = new CCTMan(4);//UAMaxDistances.DEFAULT
+		// CCTMan(4) define o raio de interação com o NPC
+		m_ConditionTarget = new CCTMan(UAMaxDistances.DEFAULT);
 		m_ConditionItem = new CCINone;
 	}
-
 
 	override string GetText()
 	{
@@ -22,62 +27,58 @@ class alpActionBuy: ActionInteractBase
 
 	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
 	{
+		// 1. Validação primária de estado do jogador
+		if ( !player || player.IsRestrained() ) return false;
 
-		
-		
-		alpNPC ntarget = alpNPC.Cast(  target.GetObject() );
-		if( !player.IsRestrained() && ntarget && ntarget.IsAlive() && ntarget.IsErectedALP()  && ntarget.alp_StockID > 0 && ntarget.CanBuingALP() && ntarget.CanSpeakWithMe(player) )
+		// 2. Validação do NPC (Alvo)
+		alpNPC ntarget;
+		if ( Class.CastTo(ntarget, target.GetObject()) )
 		{
-
-			return true;
+			// Verifica se o NPC está vivo, em posição de interação e possui um estoque válido
+			if ( ntarget.IsAlive() && ntarget.IsErectedALP() && ntarget.alp_StockID > 0 )
+			{
+				// Verifica condições customizadas de fala e permissão de compra
+				if ( ntarget.CanBuingALP() && CanSpeakWithMe(ntarget, player) )
+				{
+					return true;
+				}
+			}
 		}
 	
 		return false;
 	}
 
+	// Lógica de expansão para sistemas de reputação ou facções
 	bool CanSpeakWithMe(alpNPC npc, PlayerBase player)
 	{
-		
-		return true;
+		if ( !npc || !player ) return false;
+		return npc.CanSpeakWithMe(player);
 	}
 	
 	override void OnExecuteServer( ActionData action_data )
 	{
-		
-		alpNPC npc = alpNPC.Cast( action_data.m_Target.GetObject() );
-
-		if (npc)
+		alpNPC npc;
+		if ( Class.CastTo(npc, action_data.m_Target.GetObject()) )
 		{
-			action_data.m_Player.GetRP().GetCart().SetNPCid( npc.alp_StockID,  npc.alp_IDmission  );
-			action_data.m_Player.GetSyncData().RegisterToStats( true );
+			PlayerBase player = action_data.m_Player;
 			
-			action_data.m_Player.GetSyncData().ForceSync();
-			GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID , action_data.m_Player );
-		}		
-		
-	}
-	
-	
-	override void OnExecuteClient( ActionData action_data )
-	{
-		
-		alpNPC npc = alpNPC.Cast( action_data.m_Target.GetObject() );
-
-		if (npc)
-		{
-			GetND().GetMS().GetTrader().SetNPC(npc.alp_StockID);						
-			action_data.m_Player.GetRP().GetCart().SetNPCid( npc.alp_StockID  );
-			alpTraderCoreBase.TRADER_ACTION_BUY = true;
-			
-			
-			
-			if (!GetGame().GetUIManager().FindMenu(ALP_MENU_TRADER))
+			// 1. Vincula o NPC atual ao carrinho de compras do jogador
+			if ( player.GetRP() && player.GetRP().GetCart() )
 			{
-				GetGame().GetUIManager().EnterScriptedMenu(ALP_MENU_TRADER, NULL);
-			}						
-			
-		}
-	}
+				player.GetRP().GetCart().SetNPCid( npc.alp_StockID, npc.alp_IDmission );
+			}
 
-		
-}
+			// 2. Sincroniza dados e solicita o estoque ao módulo Trader
+			if ( player.GetSyncData() )
+			{
+				player.GetSyncData().RegisterToStats( true );
+				player.GetSyncData().ForceSync();
+			}
+
+			if ( GetND() && GetND().GetMS() && GetND().GetMS().GetTrader() )
+			{
+				GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID, player );
+			}
+		}		
+	}
+};

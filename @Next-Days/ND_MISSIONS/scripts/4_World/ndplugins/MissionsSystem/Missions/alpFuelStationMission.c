@@ -1,154 +1,129 @@
-//noRadiation Zone 
+/**
+ * alpFuelStationMission.c
+ * * MISSION LOGIC: FUEL STATION - Módulo ND_MISSIONS
+ * Gerencia o reabastecimento e a disputa por combustível em postos específicos.
+ */
+
 class alpFuelStationMission extends alpMission
 {
-	ref array<FuelStation> alp_FuelStations
+	ref array<FuelStation> alp_FuelStations;
 
 	void ~alpFuelStationMission()
 	{
-		delete alp_FuelStations;					
+		if (alp_FuelStations)
+			delete alp_FuelStations;					
 	}
-//-------------------------------------------------------------------
-//***************************//
-//adjust default setting
-//***************************//			
+
+	// --- Configurações Iniciais ---
+	
 	override void OnInit()
 	{
-		//messages setting
-		alp_SendInfoStart	= ALPMSTYPE.MMMISSIONSTART;
-		alp_SendInfoEnd		= ALPMSTYPE.MMMISSIONEND;
-		alp_AlertInfoIn		= ALPMSTYPE.SMPERSONAL;
-		alp_AlertInfoOut	= ALPMSTYPE.SMPERSONAL;
-		alp_PagerInfoIn		= ALPMSTYPE.MMPERSONAL;
-		alp_PagerInfoOut	= ALPMSTYPE.MMPERSONAL;		
+		// Configuração de mensagens padrão
+		alp_SendInfoStart   = ALPMSTYPE.MMMISSIONSTART;
+		alp_SendInfoEnd     = ALPMSTYPE.MMMISSIONEND;
+		alp_AlertInfoIn     = ALPMSTYPE.SMPERSONAL;
+		alp_AlertInfoOut    = ALPMSTYPE.SMPERSONAL;
+		alp_PagerInfoIn     = ALPMSTYPE.MMPERSONAL;
+		alp_PagerInfoOut    = ALPMSTYPE.MMPERSONAL;		
 		
-		alp_FuelStations 	= new array<FuelStation>;
+		alp_FuelStations    = new array<FuelStation>;
 	}
 	
-//-------------------------------------------------------------------
-//***************************//
-//First spawn condition - verification available spot
-//***************************//		
+	// --- Posicionamento e Spawn ---
+
 	override protected bool SetPosition()
 	{
-		
-		
+		// Busca um posto de combustível disponível no mapa
 		array<float> coordinates = GetND().GetMS().GetFreePlace().GetPositionFS( this );
 		
-		if ( coordinates.Count() >= 4 )
+		if ( coordinates && coordinates.Count() >= 4 )
 		{
 			alp_Position = Vector( coordinates.Get(0), coordinates.Get(1), coordinates.Get(2) );
-			alp_Angle = Vector(  coordinates.Get(3), 0 , 0 );
-			alp_Angle = alp_Angle.GetRelAngles();
-
-			return true;
-		} 
-		else
-		{
-			return false;
-		}
-				
-	}	
-	
-	override bool IsMissionCreated()
-	{
-		bool condition = super.IsMissionCreated();
-		if ( condition )
-		{//restock fuel in station nearby
-			RestockFuelStation();		
+			alp_Angle = Vector( coordinates.Get(3), 0, 0 ); // Define a rotação baseada no layout do posto
 			return true;
 		}
 		return false;
-			
 	}
-	
-	void RestockFuelStation()
+
+	override protected void SpawnMissionObjects()
 	{
-		alp_FuelStations.Clear();
-		
+		super.SpawnMissionObjects();
+
+		// Identifica e configura as bombas de combustível no raio da missão
 		array<Object> objects = new array<Object>;
-		array<CargoBase> proxyCargos = new array<CargoBase>;
-		GetGame().GetObjectsAtPosition( GetPosition() , 50.0, objects, proxyCargos);
-	
+		GetGame().GetObjectsAtPosition( alp_Position, 20, objects, null );
 
-		int c = objects.Count();
-		for (int i = 0; i < c; i++)
+		foreach (Object obj : objects)
 		{
-			Object o = objects[i];
-
-			if (o && o.IsFuelStation())
+			FuelStation fs;
+			if ( Class.CastTo( fs, obj ) )
 			{
-				FuelStation fs = FuelStation.Cast(o);
-				if (fs && fs.GetFuelAmmount() < fs.GetMinFuelAmmount() )
-				{
-					
-					float max = fs.GetFuelAmmountMax() - fs.GetFuelAmmount();
-					
-					max = max * Math.RandomFloat(0.4,1.0);
-					
-					fs.AddFuelALP( max );
-					fs.SaveFuelStationALP();
-										
-					//delete fuelstation
-					alpPluginNDmissionsSystem.FuelStations.RemoveItem( fs );					
-					
-					alp_FuelStations.Insert( fs );
-				}
+				// Calcula um reabastecimento aleatório para a bomba
+				float maxNeeded = fs.GetFuelAmmountMax() - fs.GetFuelAmmount();
+				maxNeeded = maxNeeded * Math.RandomFloat(0.4, 1.0);
 				
+				fs.AddFuelALP( maxNeeded );
+				fs.SaveFuelStationALP();
+								
+				// Transfere o controle da bomba para a missão
+				alpPluginNDmissionsSystem.FuelStations.RemoveItem( fs );					
+				alp_FuelStations.Insert( fs );
 			}
-		}	
+		}
 	}
-	
+
 	override void DespawnMission()
 	{		
 		super.DespawnMission();	
-		alp_FuelStations.Clear();
+		if (alp_FuelStations) alp_FuelStations.Clear();
 		alp_Position = "0 0 0";
-	}	
-//-------------------------------------------------------------------
-//***************************//
-//Rewrite default methods
-//***************************//		
+	}
 
+	// --- Verificações de Estado ---
 
-	override protected bool CheckSecuredCondition(float timeslice) {	
-		if ( super.CheckSecuredCondition( timeslice )  &&  !IsAvailableFuel() ) {
+	override protected bool CheckSecuredCondition(float timeslice) 
+	{	
+		// Sucesso: Condição base OK + Fim do combustível disponível
+		if ( super.CheckSecuredCondition( timeslice ) && !IsAvailableFuel() ) 
+		{
 			return true;
 		}
 		return false;
 	}
 	
-	override protected bool CheckFailedCondition(float timeslice) {	
-		if ( IsFuelStationRuined() ) {
+	override protected bool CheckFailedCondition(float timeslice) 
+	{	
+		// Falha: As bombas foram destruídas
+		if ( IsFuelStationRuined() ) 
+		{
 			return true;
 		}
 		return false;
 	}	
 
+	/**
+	 * Verifica se ainda há combustível nas bombas da missão.
+	 */
 	bool IsAvailableFuel()
 	{
-
-		for(int i = 0; i < alp_FuelStations.Count();i++)
+		foreach (FuelStation fs : alp_FuelStations)
 		{
-			FuelStation fs = alp_FuelStations.Get(i);
-			if (fs && fs.GetFuelAmmount() > fs.GetMinFuelAmmount())
-			{
+			if ( fs.GetFuelAmmount() > 1.0 ) // Considera disponível se houver mais de 1 litro
 				return true;
-			}	
-		}		
+		}
 		return false;
 	}
-	
+
+	/**
+	 * Verifica se alguma das bombas essenciais foi arruinada.
+	 */
 	bool IsFuelStationRuined()
 	{
-
-		for(int i = 0; i < alp_FuelStations.Count();i++)
+		foreach (FuelStation fs : alp_FuelStations)
 		{
-			FuelStation fs = alp_FuelStations.Get(i);
-			if (fs && !fs.IsRuined() )
-			{
-				return false;
-			}	
-		}		
-		return true;
-	}	
+			if ( fs.IsRuined() )
+				return true;
+		}
+		return false;
+	}
 }

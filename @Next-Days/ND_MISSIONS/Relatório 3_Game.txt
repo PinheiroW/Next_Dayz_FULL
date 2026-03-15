@@ -1,0 +1,44 @@
+📄 RELATÓRIO DE AUDITORIA TÉCNICA
+Módulo: ND_MISSIONS
+Diretório: scripts/3_Game
+Status Atual: 🟢 ESTÁVEL E OTIMIZADO (Pronto para produção na versão atual do DayZ)
+
+1. Resumo Executivo
+A auditoria focou na modernização do código para os padrões recentes da Enfusion Engine (DayZ 1.25+), eliminação de riscos críticos de crash (CTD) gerados por falhas de gerenciamento de memória (Null Pointers) e correção de erros de sintaxe silenciosos. Nenhuma dinâmica de gameplay, cálculo de radiação, preços de trader ou economia foi alterada, preservando 100% a identidade original do projeto.
+
+2. Principais Problemas Resolvidos
+A. Prevenção de Crashes Críticos (Memory Safety)
+Vários arquivos possuíam arrays e mapas declarados como referências, mas sem instanciamento no momento da criação da classe. Isso derrubaria o servidor durante o carregamento de missões ou NPCs.
+
+Correção: Adição de construtores obrigatórios (new array, new map) em arquivos estruturais como alpMissionStore.c, alpClientData.c, alpOptionsMS.c e alpOptionsMS_templates_NPC.c.
+
+Proteção de Callbacks: Implementados Null Checks rigorosos ao processar a conexão de jogadores (alpPluginBase.c) e ao desenhar marcadores no mapa (alpMAPMARKERS.c).
+
+B. Correções de Sintaxe e Compatibilidade (Enfusion Script)
+A engine tornou-se mais rigorosa com o tempo. Códigos legados que antes geravam apenas avisos agora impedem a compilação.
+
+Finais de Bloco: Adicionados os pontos e vírgulas (;) faltantes em dezenas de enums e classes (alpConstants.c, ParticleList.c, econsumetype.c, GamePlay.c, alpOptionsResources.c).
+
+Herança Inválida: Removida a tentativa de herança entre enums em econsumetype.c, que impedia o carregamento do sistema de consumo de água contaminada.
+
+Modernização de Memória: Substituição global do prefixo depreciado autoptr por ref para garantir que o Garbage Collector da engine funcione corretamente e evite vazamentos de memória (memory leaks).
+
+Tipagem: Padronização de literais booleanos (troca de 0 para false).
+
+C. Correções de Lógica e Persistência
+Bug de Radiação: Corrigido o cálculo de expansão da área de radiação (GetRadiusMultiplier em alpOptionsMS_templates.c). A divisão de inteiros causava um pulo direto para 100%; agora, convertida para float, a radiação sobe de forma gradual.
+
+Persistência de Missões Privadas: O arquivo alpNDbase.c possuía uma lógica invertida (!FileExist), o que impedia o carregamento do JSON de missões após o restart do servidor. A lógica foi corrigida para garantir o save state.
+
+Segurança de I/O: O alpPlayersID.c agora verifica e cria ativamente o diretório (MakeDirectory) antes de tentar salvar os IDs numéricos dos jogadores, evitando falhas silenciosas em novas instalações.
+
+Limpeza de UI: O filtro de nomes em DayzGame.c foi corrigido. A string agora é manipulada corretamente (child_name = child_name.Replace(...)) para ocultar classes técnicas ("alp_", "Bot") do menu principal.
+
+3. Impacto no Servidor
+Com a camada 3_Game saneada, o servidor ganha os seguintes benefícios diretos:
+
+Inicialização Limpa: O log do servidor não será mais poluído por centenas de avisos de "Unexpected symbol", "Null Pointer Exception" ou falhas de Cast.
+
+Estabilidade em Longo Prazo: O gerenciamento correto de arrays (ref) e eventos no alpPluginBase.c garante que o servidor não sofra degradação de performance após muitas horas ligado.
+
+Tráfego de Rede Seguro: Os templates que trafegam dados via RPC (Remote Procedure Call) entre Servidor/Cliente agora garantem que nenhum dado nulo seja enviado, evitando a desconexão acidental de jogadores por erros de desserialização.

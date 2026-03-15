@@ -1,135 +1,123 @@
-//radiation mission
+/**
+ * alpRadiationZone.c
+ * * MISSION LOGIC: RADIATION ZONE - Módulo ND_MISSIONS
+ * Gerencia zonas contaminadas, dano por proximidade e barris radioativos.
+ */
+
 class alpRadiationZone extends alpMission
 {
+	// --- Configurações Iniciais ---
 
-
-
-//-------------------------------------------------------------------
-//***************************//
-//adjust default setting
-//***************************//			
 	override void OnInit()
 	{
-		//messages setting
-		alp_SendInfoStart	= ALPMSTYPE.MMRADIATIONSTART;
-		alp_SendInfoEnd		= ALPMSTYPE.MMRADIATIONEND;
-		alp_AlertInfoIn		= ALPMSTYPE.SMRADIATIONIN;
-		alp_AlertInfoOut	= ALPMSTYPE.SMRADIATIONOUT;
-		alp_PagerInfoIn		= ALPMSTYPE.MMPERSONAL;
-		alp_PagerInfoOut	= ALPMSTYPE.MMPERSONAL;		
+		// Configuração de mensagens específicas de Radiação
+		alp_SendInfoStart   = ALPMSTYPE.MMRADIATIONSTART;
+		alp_SendInfoEnd     = ALPMSTYPE.MMRADIATIONEND;
+		alp_AlertInfoIn     = ALPMSTYPE.SMRADIATIONIN;
+		alp_AlertInfoOut    = ALPMSTYPE.SMRADIATIONOUT;
+		alp_PagerInfoIn     = ALPMSTYPE.MMPERSONAL;
+		alp_PagerInfoOut    = ALPMSTYPE.MMPERSONAL;		
 	}
 
+	// --- Lógica de Entrada e Saída ---
 
-//-------------------------------------------------------------------
-//***************************//
-//Rewrite default methods
-//***************************//	
-	override protected void OnEnter(Object obj )
+	override protected void OnEnter(Object obj)
 	{
 		super.OnEnter(obj);
-		//SetSetting( alpMISSION_SETTING.MISSION_IDLE );									
-	};		
+		// A ativação da radiação para o player ocorre no OnUpdate via distância
+	}	
 	
-	override protected bool SpawnLoot(bool missionSecured = false)
-	{
-		if (super.SpawnLoot(missionSecured))
-		{
-			SetRadioactiveBarrels();
-			return true;
-		}
-		else return false;
-	}
-	
-	override protected void InitMissionValues(int radius = 0, float radiation = 0)
-	{
-		if ( !radius && !radiation ) {
-			if ( GetTemplate().radiusOfRadiation.Count() == 2 && GetTemplate().strengthOfRadiation.Count() == 2){
-				alp_DamageRadius	= Math.RandomIntInclusive(Math.AbsInt(GetTemplate().radiusOfRadiation.Get(0)),Math.AbsInt(GetTemplate().radiusOfRadiation.Get(1)));
-				alp_Radiation		= Math.RandomFloatInclusive(Math.AbsFloat(GetTemplate().strengthOfRadiation.Get(0)),Math.AbsFloat(GetTemplate().strengthOfRadiation.Get(1)));
-			}
-			else {
-				alp_DamageRadius 	= alp_SafeRadius;
-				alp_Radiation		= 1;
-			}				
- 		} else {
-			alp_DamageRadius = radius;
-			alp_Radiation = radiation;
-		}
-				
-
-
-		if ( GetTemplate().radiationDynamic || GetTemplate().radiationSpawnedByContaminedArea )
-		{
-			RemoveSetting( alpMISSION_SETTING.RADIATION_ACTIVE );
-		}
-		else
-		{
-			SetSetting( alpMISSION_SETTING.RADIATION_ACTIVE );		
-		}
-	}		
-	
-	override protected void InteractionOnInsiders(Object obj,float distance) 
-	{
-		if (obj.IsMan() ) 
-			SetPlayerInRadiation(PlayerBase.Cast(obj),distance);			
-	};
-	
-	override protected void OnLeave(Object obj )
+	override protected void OnLeave(Object obj)
 	{
 		super.OnLeave(obj);
 		if (obj.IsMan()) 
-			CleanPlayer(PlayerBase.Cast(obj));		
-		
-	};		
+			CleanPlayer(PlayerBase.Cast(obj)); // Remove efeitos visuais/sonoros		
+	}
+
 	override void OnLeavePlayer(PlayerBase player) 	
 	{
 		super.OnLeavePlayer(player);
 		CleanPlayer(player);		
 	}
+
+	// --- Lógica de Atualização (Tick) ---
+
+	override void OnUpdate(float timeslice)
+	{
+		super.OnUpdate(timeslice);
+
+		// Se a radiação estiver ativa na missão, aplica o dano aos jogadores próximos
+		if ( (alp_Setting & alpMISSION_SETTING.RADIATION_ACTIVE) )
+		{
+			foreach (alpMissionInsider ins : alp_Insiders)
+			{
+				if ( ins.alp_DamageZone )
+				{
+					// Calcula intensidade baseada na distância do centro
+					float distance = vector.Distance(ins.GetObject().GetPosition(), GetPosition());
+					SetPlayerInRadiation(PlayerBase.Cast(ins.GetObject()), distance);
+				}
+			}
+		}
+	}
+
+	// --- Gerenciamento de Loot e Configurações ---
+
+	override protected bool SpawnLoot(bool missionSecured = false)
+	{
+		if (super.SpawnLoot(missionSecured))
+		{
+			SetRadioactiveBarrels(); // Configura barris especiais após o spawn do loot
+			return true;
+		}
+		return false;
+	}
 	
 	override void SetSettingOnEnter()
 	{
+		// Lógica para ativação de radiação dinâmica baseada em tempo
 		if ( GetTemplate().radiationDynamic && !GetTemplate().radiationSpawnedByContaminedArea )
 		{
-			int time = GetTemplate().radiationDynamic;
-			time *= 1000;		
-			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(this.SetSetting,time,false, alpMISSION_SETTING.RADIATION_ACTIVE);
+			int timeMs = GetTemplate().radiationDynamic * 1000;		
+			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(this.SetSetting, timeMs, false, alpMISSION_SETTING.RADIATION_ACTIVE);
 		}
-
 	}
-	
-	
-//-------------------------------------------------------------------
-//***************************//
-//Private usefull methods
-//***************************//		
-		
 
+	// --- Métodos Auxiliares ---
+
+	/**
+	 * Configura barris amarelos como objetos pertencentes a esta missão radioativa.
+	 */
 	private void SetRadioactiveBarrels()
 	{
-		foreach(alpMissionElement e : alp_LootContainer)
+		foreach (alpMissionElement e : alp_LootContainer)
 		{
 			if ( e.Get() && e.Get().GetType() == "alp_Barrel_Yellow" )			
 			{
-				alp_Barrel_Yellow barrel 	= alp_Barrel_Yellow.Cast( e.Get() );	  //added items
-				//barrel.alp_SmokeType		= GetTemplate().visualEffect;
-				barrel.Open();
-				
-				barrel.alp_MissionID = GetID(); 
-
-				if (GetTemplate().enableDeactivation) barrel.alp_Lock(false);  
-				else barrel.alp_Lock(true);						
+				alp_Barrel_Yellow barrel = alp_Barrel_Yellow.Cast( e.Get() );
+				if (barrel)
+				{
+					barrel.SetMissionID( GetID() );
+				}
 			}
-		}				
+		}
 	}
 
+	/**
+	 * Limpa os estados de radiação do jogador (chamado via Plugin de Radiação).
+	 */
 	private void CleanPlayer(PlayerBase player)
 	{
 		if (player)
-		{
-			player.GetRP().SetRadiation( GetID() , 0 );		
-		}		
-	}	
+			GetND().GetRadiation().CleanPlayer(player);
+	}
 
-
+	/**
+	 * Define o nível de exposição do jogador baseado na distância.
+	 */
+	private void SetPlayerInRadiation(PlayerBase player, float distance)
+	{
+		if (player)
+			GetND().GetRadiation().SetPlayerInRadiation(player, distance, GetID());
+	}
 }

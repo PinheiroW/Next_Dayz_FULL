@@ -1,22 +1,40 @@
+/**
+ * tentbase.c
+ * * MODDED ENTITY (BARRACAS) - Módulo ND_MISSIONS
+ * Garante a persistência do status de missão para todas as variantes de tendas/barracas.
+ */
 
 modded class TentBase extends ItemBase
 {
-	override void OnStoreSave( ParamsWriteContext ctx )
+	/**
+	 * Salva os dados customizados no storage do servidor.
+	 */
+	override void OnStoreSave(ParamsWriteContext ctx)
 	{   
-		super.OnStoreSave( ctx );
+		// Salva os dados originais da barraca (inventário, estado, etc.)
+		super.OnStoreSave(ctx);
 
-        ctx.Write( alp_IsMissionObject );
-
+		// Salva se a barraca é um objeto de missão (Next-Days)
+		ctx.Write(alp_IsMissionObject);
 	}	
 
-	override bool OnStoreLoad( ParamsReadContext ctx, int version )
+	/**
+	 * Carrega os dados customizados do storage do servidor após um restart.
+	 */
+	override bool OnStoreLoad(ParamsReadContext ctx, int version)
 	{
-		if ( super.OnStoreLoad( ctx, version ) )
+		// Carrega os dados originais primeiro
+		if (super.OnStoreLoad(ctx, version))
 		{
-			ctx.Read( alp_IsMissionObject );
+			// Lê o status de objeto de missão
+			if (!ctx.Read(alp_IsMissionObject))
+			{
+				alp_IsMissionObject = false; // Valor padrão caso a leitura falhe
+			}
 						
 			return true;
 		}
-		else return false;
+		
+		return false;
 	}
 };

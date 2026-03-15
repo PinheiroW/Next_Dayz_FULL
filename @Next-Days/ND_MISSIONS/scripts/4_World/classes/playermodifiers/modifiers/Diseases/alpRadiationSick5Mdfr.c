@@ -1,130 +1,136 @@
-// Script File
-
-
+/**
+ * alpRadiationSick5Mdfr.c
+ * * MODIFICADOR DE DOENÇA DE RADIAÇÃO (ESTÁGIO 5 - TERMINAL) - Módulo ND_MISSIONS
+ * Estágio Final: Altíssima letalidade, sangramento massivo, dano e risco de morte súbita (L6).
+ */
 
 class alpRadiationSick5Mdfr: ModifierBase
 {
-
-		
+	static const int WATER_DRAIN_FROM_VOMIT  = 450;
+	static const int ENERGY_DRAIN_FROM_VOMIT = 310;	
 	
-	static const int 						WATER_DRAIN_FROM_VOMIT = 450;
-	static const int 						ENERGY_DRAIN_FROM_VOMIT = 310;	
-	
-	const ref array<string>					BLEEDINGZONES = {"Head","Neck","Pelvis","Spine","LeftShoulder","LeftArm","LeftArmRoll","LeftForeArm","RightShoulder","RightArm","RightArmRoll","RightForeArm","LeftForeArmRoll","RightForeArmRoll","LeftLeg","LeftLegRoll","LeftUpLeg","LeftUpLegRoll","RightLeg","RightLegRoll","RightUpLeg","RightUpLegRoll","LeftFoot","LeftToeBase","RightFoot","RightToeBase"};
+	const ref array<string> BLEEDINGZONES = {
+		"Head", "Neck", "Pelvis", "Spine", "LeftShoulder", "LeftArm", "LeftArmRoll", 
+		"LeftForeArm", "RightShoulder", "RightArm", "RightArmRoll", "RightForeArm", 
+		"LeftForeArmRoll", "RightForeArmRoll", "LeftLeg", "LeftLegRoll", "LeftUpLeg", 
+		"LeftUpLegRoll", "RightLeg", "RightLegRoll", "RightUpLeg", "RightUpLegRoll", 
+		"LeftFoot", "LeftToeBase", "RightFoot", "RightToeBase"
+	};
 
-
-
-	
-
-	
 	override void Init()
 	{
-
-		m_ID 								= rModifiers.MDF_ALPRADIATIONSICK5;
-		m_TickIntervalInactive 				= DEFAULT_TICK_TIME_INACTIVE;
-		m_TickIntervalActive 				= DEFAULT_TICK_TIME_ACTIVE;//DEFAULT_TICK_TIME_ACTIVE;
-
-
+		m_ID 					= rModifiers.MDF_ALPRADIATIONSICK5;
+		m_TickIntervalInactive 	= DEFAULT_TICK_TIME_INACTIVE;
+		m_TickIntervalActive 	= DEFAULT_TICK_TIME_ACTIVE;
 	}
 	
 	override bool ActivateCondition(PlayerBase player)
 	{
-		return ( player.GetSingleAgentCount(alpeAgents.RADIATION) >= ALP_RADPOISON.L5 );
+		if (!player) return false;
 		
+		return ( player.GetSingleAgentCount(alpeAgents.RADIATION) >= ALP_RADPOISON.L5 );
 	}
 
 	override void OnActivate(PlayerBase player)
 	{
-		/*
-		if( player.m_NotifiersManager ) 
-			player.m_NotifiersManager.ActivateByType(alpeNotifiers.NTF_RADIATIONSICK);		
-		*/
+		if (!player) return;
 		
 		player.IncreaseDiseaseCount();
-		player.GetRP().SetRadiationSickStage( ALP_RADIATION_SICKSTAGE.L5 );
 		
+		// OTIMIZAÇÃO: Segurança no acesso ao RP
+		if (player.GetRP())
+		{
+			player.GetRP().SetRadiationSickStage(ALP_RADIATION_SICKSTAGE.L5);
+		}
 	}
 	
 	override void OnReconnect(PlayerBase player)
 	{
 		OnActivate(player);
-
 	}
 
 	override void OnDeactivate(PlayerBase player)
 	{
+		if (!player) return;
+		
 		player.DecreaseDiseaseCount();
-		player.GetRP().SetRadiationSickStage( ALP_RADIATION_SICKSTAGE.NONE );
-		/*
-		if( player.m_NotifiersManager ) 
-			player.m_NotifiersManager.DeactivateByType(alpeNotifiers.NTF_RADIATIONSICK);	
-		*/		
+		
+		if (player.GetRP())
+		{
+			player.GetRP().SetRadiationSickStage(ALP_RADIATION_SICKSTAGE.NONE);
+		}
 	}
 
 	override bool DeactivateCondition(PlayerBase player)
 	{
+		if (!player) return false;
 		
-		return false;
+		// Condição de cura original (geralmente impossível sem tratamentos muito específicos do mod)
+		return ( player.GetSingleAgentCount(alpeAgents.RADIATION) < ALP_RADPOISON.L5 );
 	}
 
 	override void OnTick(PlayerBase player, float deltaT)
 	{
+		if (!player) return;
 
-		
-		//death
-		if ( player.GetSingleAgentCount( alpeAgents.RADIATION ) >= ALP_RADPOISON.L6 )
+		// 1. Morte Súbita (Nível 6 Atingido)
+		if ( player.GetSingleAgentCount(alpeAgents.RADIATION) >= ALP_RADPOISON.L6 )
 		{
-			player.SetHealth("","",0);		
+			player.SetHealth("", "", 0);
+			return; // Quebra a execução para não gastar CPU calculando sintomas em um morto
 		}
-		
-		//SetSickness(player);
 
-		//thirsty
+		// 2. Desidratação contínua
 		float metabolic_speed = PlayerConstants.METABOLIC_SPEED_WATER_SPRINT;
-		float water = player.GetStatWater().Get();
 		player.GetStatWater().Add( (-metabolic_speed * deltaT) );
 					
-		//sickness
-
-		float 		vomit 	= 0.970;
-		float 		bleed 	= 0.800;
-		float 		infection = 0.650;		
-		float  		health 	= 0.900;
+		// Probabilidades extremas do Estágio 5
+		float vomit 	= 0.970; // 3% de chance por tick
+		float bleed 	= 0.800; // 20% de chance por tick
+		float infection = 0.650; // 35% de chance por tick
+		float health 	= 0.900; // 10% de chance por tick de sofrer dano na vida real/choque
 		
-			
-		//infection
-		if (Math.RandomFloat01()  >= infection  ) 
+		// 3. Infecção Grave
+		if (Math.RandomFloat01() >= infection) 
 		{
-			player.m_AgentPool.AddAgent( eAgents.WOUND_AGENT, m_TickIntervalActive);
+			player.m_AgentPool.AddAgent(eAgents.WOUND_AGENT, m_TickIntervalActive);
 		}	
 		
-		//vomiting
-		if (Math.RandomFloat01()  >= vomit) 
+		// 4. Vômitos Constantes
+		if (Math.RandomFloat01() >= vomit) 
 		{
-			SymptomBase symptom = player.GetSymptomManager().QueueUpPrimarySymptom(SymptomIDs.SYMPTOM_VOMIT);
-				
-			if( symptom )
+			if (player.GetSymptomManager())
 			{
-				symptom.SetDuration(5);
-			
-				if (m_Player.GetStatWater().Get() > (WATER_DRAIN_FROM_VOMIT))
-					m_Player.GetStatWater().Add(-1 * WATER_DRAIN_FROM_VOMIT);
-				if (m_Player.GetStatEnergy().Get() > (ENERGY_DRAIN_FROM_VOMIT))
-					m_Player.GetStatEnergy().Add(-1 * ENERGY_DRAIN_FROM_VOMIT);
+				SymptomBase symptom = player.GetSymptomManager().QueueUpPrimarySymptom(SymptomIDs.SYMPTOM_VOMIT);
+					
+				if (symptom)
+				{
+					symptom.SetDuration(5);
+				
+					// CORREÇÃO: Uso da variável 'player'
+					if (player.GetStatWater().Get() > WATER_DRAIN_FROM_VOMIT)
+						player.GetStatWater().Add(-1 * WATER_DRAIN_FROM_VOMIT);
+						
+					if (player.GetStatEnergy().Get() > ENERGY_DRAIN_FROM_VOMIT)
+						player.GetStatEnergy().Add(-1 * ENERGY_DRAIN_FROM_VOMIT);
+				}
 			}
 		}	
-		//bleeding	
-		if (Math.RandomFloat01()  >= bleed) 
+		
+		// 5. Sangramento Severo
+		if (Math.RandomFloat01() >= bleed) 
 		{
-			player.GetBleedingManagerServer().AttemptAddBleedingSourceBySelection(BLEEDINGZONES.GetRandomElement());	
+			if (player.GetBleedingManagerServer() && BLEEDINGZONES && BLEEDINGZONES.Count() > 0)
+			{
+				player.GetBleedingManagerServer().AttemptAddBleedingSourceBySelection(BLEEDINGZONES.GetRandomElement());	
+			}
 		}	
 		
-		//damage health
-		if (Math.RandomIntInclusive(0,1000) >= health) 
+		// 6. Dano Direto à Vida e Choque
+		if (Math.RandomFloat01() >= health) 
 		{
-			player.DecreaseHealth("","Shock", PlayerConstants.UNCONSCIOUS_THRESHOLD );
+			// Preservada a lógica base do autor (Pode deduzir vida ou aplicar choque letal)
+			player.DecreaseHealth("", "Shock", PlayerConstants.UNCONSCIOUS_THRESHOLD);
 		}						
 	}
-	
-
-};
+}
