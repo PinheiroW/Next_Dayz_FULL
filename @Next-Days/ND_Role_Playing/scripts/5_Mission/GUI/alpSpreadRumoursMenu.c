@@ -1,261 +1,187 @@
-
-
-
 class alpSpreadRumoursMenu extends UIScriptedMenu
 {
+    const int alp_UPDATE = 1;
+    float alp_Update;
+    
+    protected PlayerBase alp_Player;
+    protected bool m_IsInitialized = false;
 
-	
-	const int alp_UPDATE = 1;
-	float alp_Update;
-	
-	protected PlayerBase					alp_Player;
-	
-	Widget 									alp_WindowGossip;
-	
-	TextWidget								alp_SaveGossipNegativeCost;
-	TextWidget								alp_SaveGossipNegativeGain;
-	TextWidget								alp_SaveGossipPositiveCost;
-	TextWidget								alp_SaveGossipPositiveGain;
-	
-	
-	ButtonWidget							alp_GossipNegativeBtn;
-	ButtonWidget							alp_GossipPositiveBtn;
-	
-	autoptr map<int,string>						alp_CurrencyMapped;
-	
-	//balance	
-	TextWidget								alp_BalanceText;
-	float 									alp_Balance;
+    Widget layoutRoot;
+    Widget alp_WindowGossip;
+    Widget alp_BodyWindowGossip;
 
-	
-	Widget									alp_BodyWindowGossip;
-	
-	int 									alp_MyCash;
-	ref alpSpreadRumoursFees 				alp_Fees;
-	
-	override Widget Init()
-	{
+    TextWidget alp_SaveGossipNegativeCost;
+    TextWidget alp_SaveGossipNegativeGain;
+    TextWidget alp_SaveGossipPositiveCost;
+    TextWidget alp_SaveGossipPositiveGain;
 
-		
-		Class.CastTo(alp_Player,GetGame().GetPlayer());
-		
-		layoutRoot 	= GetGame().GetWorkspace().CreateWidgets("ND_Role_Playing/gui/layouts/SpreadRumour.layout");
-		
-		
-		
-		alp_BodyWindowGossip = Widget.Cast( layoutRoot.FindAnyWidget("BodyWindowGossip") );
-		alp_SaveGossipNegativeCost = TextWidget.Cast( layoutRoot.FindAnyWidget( "GossipNegativeCost") );
-		alp_SaveGossipNegativeGain = TextWidget.Cast( layoutRoot.FindAnyWidget( "GossipNegative") );
-		alp_SaveGossipPositiveCost = TextWidget.Cast( layoutRoot.FindAnyWidget( "GossipPositiveCost") );
-		alp_SaveGossipPositiveGain = TextWidget.Cast( layoutRoot.FindAnyWidget( "GossipPositive") );
-		
-		alp_GossipNegativeBtn = ButtonWidget.Cast( layoutRoot.FindAnyWidget( "ButtonWidgetNegative") );
-		alp_GossipPositiveBtn = ButtonWidget.Cast( layoutRoot.FindAnyWidget( "ButtonWidgetPositive") );				
-		
+    ButtonWidget alp_GossipNegativeBtn;
+    ButtonWidget alp_GossipPositiveBtn;
+    
+    ref map<int, string> alp_CurrencyMapped;
+    
+    TextWidget alp_BalanceText;
+    int alp_MyCash;
+    ref alpSpreadRumoursFees alp_Fees;
 
-		ImageWidget.Cast( layoutRoot.FindAnyWidget("PositiveIcon") ).LoadImageFile(0,"ND_MISSIONS/gui/images/smTrader.paa");		
-		ImageWidget.Cast( layoutRoot.FindAnyWidget("NegativeIcon") ).LoadImageFile(0,"ND_MISSIONS/gui/images/smTrader.paa");	
-			
-		
-		ImageWidget.Cast( layoutRoot.FindAnyWidget("BalanceIcon") ).LoadImageFile(0,"ND_MISSIONS/gui/images/Cash.paa");		
-		alp_BalanceText = TextWidget.Cast( layoutRoot.FindAnyWidget( "BalanceText") );
-	
-		
-		//map currency
-		alp_CurrencyMapped = new map<int,string>;
-		map<int, ref alpCurrency> currencies = alpBANK.GetCurencies().GetCurrencies();	
-		if ( 	currencies )
-		{
-			for (int c = 0; c < currencies.Count();c++)
-			{
-				alpCurrency currency = currencies.GetElement(c);
-				alp_CurrencyMapped.Set(c,currency.Name);
-			}			
-		}	
-		
-		
-		alp_BodyWindowGossip.Show( false );
-		
-		return layoutRoot;
-	}
-	
-	void ~alpSpreadRumoursMenu()
-	{
-		alp_Player.GetSyncData().RegisterToEnhancedStatsSync(false);
-		GetND().GetMS().GetTrader().SetValidTraderData( false );				
-	}	
-	
+    override Widget Init()
+    {
+        if (m_IsInitialized) return layoutRoot;
 
-	
-		
-	override void OnShow()
-	{
-		super.OnShow();
-		SetFocus( layoutRoot );
-		GetGame().GetInput().ChangeGameFocus(1);	
-		PPEffects.SetBlurMenu( GetND().GetMS().GetOptoinsTrader().NPC_Menu_blur );
-		MissionGameplay.Cast( GetGame().GetMission() ).PlayerControlDisable(INPUT_EXCLUDE_ALL);
-		GetGame().GetMission().GetHud().ShowHudUI( false );
-		GetGame().GetMission().GetHud().ShowQuickbarUI( false );	
-		
-	}	
-	override void OnHide()
-	{
-		super.OnHide();
-		SetFocus( null );
-		PPEffects.SetBlurMenu( 0 );
-		GetGame().GetInput().ChangeGameFocus(-1);
-		MissionGameplay.Cast( GetGame().GetMission() ).PlayerControlEnable(true);	
-		GetGame().GetMission().GetHud().ShowHudUI( true );
-		GetGame().GetMission().GetHud().ShowQuickbarUI( true );	
-	}	
+        Class.CastTo(alp_Player, GetGame().GetPlayer());
+        
+        layoutRoot = GetGame().GetWorkspace().CreateWidgets("ND_Role_Playing/gui/layouts/SpreadRumour.layout");
+        
+        alp_BodyWindowGossip = Widget.Cast(layoutRoot.FindAnyWidget("BodyWindowGossip"));
+        alp_SaveGossipNegativeCost = TextWidget.Cast(layoutRoot.FindAnyWidget("TextWidgetNegativeCost"));
+        alp_SaveGossipNegativeGain = TextWidget.Cast(layoutRoot.FindAnyWidget("TextWidgetNegativeGain"));
+        alp_SaveGossipPositiveCost = TextWidget.Cast(layoutRoot.FindAnyWidget("TextWidgetPositiveCost"));
+        alp_SaveGossipPositiveGain = TextWidget.Cast(layoutRoot.FindAnyWidget("TextWidgetPositiveGain"));
+        
+        alp_GossipNegativeBtn = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ButtonWidgetNegative"));
+        alp_GossipPositiveBtn = ButtonWidget.Cast(layoutRoot.FindAnyWidget("ButtonWidgetPositive"));
+        
+        alp_BalanceText = TextWidget.Cast(layoutRoot.FindAnyWidget("BalanceText"));
+        
+        // Inicialização de Moedas (Padrão Otimizado)
+        alp_CurrencyMapped = new map<int, string>;
+        auto currenciesConfig = alpBANK.GetCurencies();
+        if (currenciesConfig)
+        {
+            map<int, ref alpCurrency> currencies = currenciesConfig.GetCurrencies();
+            if (currencies)
+            {
+                for (int i = 0; i < currencies.Count(); i++)
+                {
+                    alp_CurrencyMapped.Set(i, currencies.GetElement(i).Name);
+                }
+            }
+        }
 
-	bool alp_WindowInit = true;
-	bool alp_WindowMain;
-	
-	override void Update(float timeslice)
-	{
-		super.Update(timeslice);
-		
-		if ( GetND().GetMS().GetTrader().IsTraderSet() && alp_WindowInit )
-		{
-			//TO DO: postpone + plus info about transaction
-			alp_WindowInit = false;
-			alp_WindowMain = true;
-			alp_BodyWindowGossip.Show( true );
-						
-			InitWindow();
+        RefreshBalance();
+        
+        m_IsInitialized = true;
+        return layoutRoot;
+    }
 
-		}
-		if ( !GetND().GetMS().GetTrader().IsTraderSet() && alp_WindowMain )
-		{
-			alp_WindowInit = true;
-			alp_WindowMain = false;
-			alp_BodyWindowGossip.Show( false );
-		}
-		alp_Update += timeslice;
-		
-		if (alp_WindowMain && alp_Update >= alp_UPDATE)
-		{
-			alp_Update = 0;
-			
-			RefreshBalance();
-			RefreshBribes();
-		}	
+    void ~alpSpreadRumoursMenu()
+    {
+        // Limpeza de memória para evitar Leaks
+        if (alp_CurrencyMapped)
+        {
+            alp_CurrencyMapped.Clear();
+            delete alp_CurrencyMapped;
+        }
 
-	}	
+        if (GetND() && GetND().GetMS() && GetND().GetMS().GetTrader())
+            GetND().GetMS().GetTrader().SetValidTraderData(false);
+    }
 
-	void InitWindow()
-	{
-		RefreshBalance();	
-		InitBribes();
-		RefreshBribes();
-	}
-	
-	void RefreshBalance()
-	{	
-		
-		alp_MyCash = alp_Player.GetRP().GetCart().GetTotalBalance();
+    override void OnShow()
+    {
+        super.OnShow();
+        SetFocus(layoutRoot);
+        GetGame().GetInput().ChangeGameFocus(1);
+        PPEffects.SetBlurMenu(GetND().GetMS().GetOptoinsTrader().NPC_Menu_blur);
+        MissionGameplay.Cast(GetGame().GetMission()).PlayerControlDisable(INPUT_EXCLUDE_ALL);
+        GetGame().GetMission().GetHud().ShowHudUI(false);
+    }
 
-		alp_BalanceText.SetText( alpUF.NumberToString( alp_MyCash, 1 ) + " " + alp_CurrencyMapped.GetElement( alp_Player.GetRP().GetCart().GetCurrencyID() ) );	
-	}	
-	
-	void InitBribes()
-	{
-		alpNPCtraderStock trader = GetND().GetMS().GetTrader().GetCurrentTrader();
-		float currencyRate,coef;
-		
-		int level = alp_Player.GetSyncData().GetElement( alpRPelements.REPUTATION ).GetValue();
-		float sale = 	GetND().GetRP().GetReputationMdf( level );			
-		
-		if ( trader )
-		{
-			currencyRate = alpBANK.GetCurrencyRate( trader.CurrencyID );	
-		
-			
-			if (alp_Player.GetRP().IsHero())
-			{
-				coef = trader.PricelistRatioHero;	
-			}
-			else
-			{
-				coef = trader.PricelistRatioBandit;	
-			}
-			
-			alp_Fees = GetND().GetRP().GetInteractions().GetRumoursFees( currencyRate, coef, sale );
-		}
-		
-	}		
-	
-	void RefreshBribes()
-	{	
-		if ( alp_Fees )
-		{
-		
-			alp_SaveGossipNegativeCost.SetText( "- " + alpUF.NumberToString( alp_Fees.NegativeGossipCost , 1 ) + " " + alp_CurrencyMapped.GetElement( alp_Player.GetRP().GetCart().GetCurrencyID() ) );	
-			alp_SaveGossipNegativeGain.SetText( alpUF.NumberToString( alp_Fees.NegativeGossipGain , 1 ) );
-			alp_SaveGossipNegativeGain.SetColor(COLOR_RED);
-			
-			alp_SaveGossipPositiveCost.SetText( "- " + alpUF.NumberToString( alp_Fees.PositiveGossipCost , 1 ) + " " + alp_CurrencyMapped.GetElement( alp_Player.GetRP().GetCart().GetCurrencyID() ) );
-			alp_SaveGossipPositiveGain.SetText( alpUF.NumberToString( alp_Fees.PositiveGossipGain , 1 ) );
-			alp_SaveGossipPositiveGain.SetColor(COLOR_GREEN);		
-		
-			alp_GossipNegativeBtn.Enable(  alp_MyCash >= alp_Fees.NegativeGossipCost );
-			alp_GossipPositiveBtn.Enable( alp_MyCash >= alp_Fees.PositiveGossipCost );	
-					
-		}
+    override void OnHide()
+    {
+        super.OnHide();
+        SetFocus(null);
+        PPEffects.SetBlurMenu(0);
+        GetGame().GetInput().ChangeGameFocus(-1);
+        MissionGameplay.Cast(GetGame().GetMission()).PlayerControlEnable(true);
+        GetGame().GetMission().GetHud().ShowHudUI(true);
+    }
 
-	}		
-	
-	override bool OnClick(Widget w, int x, int y, int button)
-	{
-		if (super.OnClick(w, x, y, button)){
-			return true;
-		}
-		else 
-		{					
-			switch (w.GetUserID())
-			{		
-				//main menu
-				case 1:
-					Close();
-					return true;
-				case 11:
-					//alp_WindowGossip.Show(true);
-					return true;											
-			}
-	
-			return OnClickALP(w);
-		}
-	}	
-	
-	bool OnClickALP(Widget w)
-	{
-	
-		if (CheckGossip_Buttons(w))
-			return true;					
-						
-		return false;
-	}		
-	
-	bool CheckGossip_Buttons(Widget w)
-	{
-		float exp;
-		if (w == alp_GossipPositiveBtn)
-		{
-			exp = alp_Fees.PositiveGossipGain;
-			
-			GetND().GetMS().GetTrader().SpreadRumoursRPC( exp, alp_Fees.PositiveGossipCost , alp_Player );
-					
-			return true;
-		}
-		if (w == alp_GossipNegativeBtn)
-		{
-			exp = alp_Fees.NegativeGossipGain * -1;
-			GetND().GetMS().GetTrader().SpreadRumoursRPC( exp, alp_Fees.NegativeGossipCost , alp_Player );
-			return true;
-		}		
-		return false;
-	}		
+    void RefreshBalance()
+    {
+        if (!alp_Player) return;
+        alp_MyCash = alp_Player.GetRP().GetCart().GetTotalBalance();
+        
+        int currencyID = alp_Player.GetRP().GetCart().GetCurrencyID();
+        string currencyName = "Currency";
+        if (alp_CurrencyMapped.Contains(currencyID))
+            currencyName = alp_CurrencyMapped.Get(currencyID);
 
+        alp_BalanceText.SetText(alpUF.NumberToString(alp_MyCash, 1) + " " + currencyName);
+    }
+
+    override void Update(float timeslice)
+    {
+        super.Update(timeslice);
+        
+        alp_Update += timeslice;
+        if (alp_Update >= alp_UPDATE)
+        {
+            alp_Update = 0;
+            if (GetND().GetMS().GetTrader().IsTraderSet())
+            {
+                RefreshBalance();
+                UpdateGossipStat();
+            }
+        }
+    }
+
+    void UpdateGossipStat()
+    {
+        alp_Fees = GetND().GetMS().GetTrader().GetSpreadRumoursFees();
+        if (!alp_Fees) return;
+
+        int currencyID = alp_Player.GetRP().GetCart().GetCurrencyID();
+        string curName = alp_CurrencyMapped.Get(currencyID);
+
+        // Atualização Visual de Custos
+        alp_SaveGossipNegativeCost.SetText("- " + alpUF.NumberToString(alp_Fees.NegativeGossipCost, 1) + " " + curName);
+        alp_SaveGossipNegativeGain.SetText(alpUF.NumberToString(alp_Fees.NegativeGossipGain, 1));
+        
+        alp_SaveGossipPositiveCost.SetText("- " + alpUF.NumberToString(alp_Fees.PositiveGossipCost, 1) + " " + curName);
+        alp_SaveGossipPositiveGain.SetText(alpUF.NumberToString(alp_Fees.PositiveGossipGain, 1));
+
+        // Validação de Botões (Check de Saldo)
+        alp_GossipNegativeBtn.Enable(alp_MyCash >= alp_Fees.NegativeGossipCost);
+        alp_GossipPositiveBtn.Enable(alp_MyCash >= alp_Fees.PositiveGossipCost);
+    }
+
+    override bool OnClick(Widget w, int x, int y, int button)
+    {
+        if (super.OnClick(w, x, y, button)) return true;
+
+        switch (w.GetUserID())
+        {
+            case 1: // Close Button
+                Close();
+                return true;
+        }
+
+        return OnClickALP(w);
+    }
+
+    bool OnClickALP(Widget w)
+    {
+        if (CheckGossip_Buttons(w)) return true;
+        return false;
+    }
+
+    bool CheckGossip_Buttons(Widget w)
+    {
+        if (!alp_Fees) return false;
+
+        if (w == alp_GossipNegativeBtn && alp_MyCash >= alp_Fees.NegativeGossipCost)
+        {
+            GetND().GetMS().GetTrader().SpreadRumoursRPC(alp_Fees.NegativeGossipGain, (int)alp_Fees.NegativeGossipCost, alp_Player);
+            return true;
+        }
+
+        if (w == alp_GossipPositiveBtn && alp_MyCash >= alp_Fees.PositiveGossipCost)
+        {
+            GetND().GetMS().GetTrader().SpreadRumoursRPC(alp_Fees.PositiveGossipGain, (int)alp_Fees.PositiveGossipCost, alp_Player);
+            return true;
+        }
+
+        return false;
+    }
 }
