@@ -1,15 +1,15 @@
 /**
  * alpActionOpenBarrel.c
- * * AÇÃO DE INTERAÇÃO (ABRIR BARRIL RADIOATIVO) - Módulo ND_MISSIONS
- * Permite abrir o barril se ele não estiver trancado e estiver fechado.
+ * * USER INTERACTION (OPEN RADIOACTIVE BARREL) - Módulo ND_MISSIONS
+ * Gerencia a abertura física de barris radioativos baseada em estados de trava e visibilidade.
  */
 
 class alpActionOpenBarrel: ActionInteractBase
 {
 	void alpActionOpenBarrel()
 	{
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
+		m_CommandUID    = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
+		m_StanceMask    = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
 		m_HUDCursorIcon = CursorIcons.OpenHood;
 	}
 
@@ -18,16 +18,16 @@ class alpActionOpenBarrel: ActionInteractBase
 		return "#open";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		if ( !target ) return false;
+		if (!target) return false;
 
-		alp_Radioactive_Barrel ntarget;
-		// OTIMIZAÇÃO: Cast direto para a classe específica do mod
-		if ( Class.CastTo(ntarget, target.GetObject()) )
+		alp_Radioactive_Barrel barrel;
+		// Validação de tipo específica para barris radioativos do mod Next-Days
+		if (Class.CastTo(barrel, target.GetObject()))
 		{
-			// Só permite abrir se NÃO estiver trancado e estiver atualmente FECHADO
-			if ( !ntarget.IsLocked() && !ntarget.IsOpen() )
+			// Só permite a abertura se o objeto NÃO estiver trancado e se estiver FECHADO
+			if (!barrel.IsLocked() && !barrel.IsOpen())
 			{
 				return true;
 			}
@@ -36,17 +36,17 @@ class alpActionOpenBarrel: ActionInteractBase
 		return false;
 	}
 
-	override void OnExecuteServer( ActionData action_data )
+	override void OnExecuteServer(ActionData action_data)
 	{
-		if ( !action_data || !action_data.m_Target ) return;
+		if (!action_data || !action_data.m_Target) return;
 
-		alp_Radioactive_Barrel ntarget;
-		// Executa a abertura no servidor com validação de segurança
-		if ( Class.CastTo(ntarget, action_data.m_Target.GetObject()) )
+		alp_Radioactive_Barrel barrel;
+		// Processa a transição de estado no servidor para replicação na rede
+		if (Class.CastTo(barrel, action_data.m_Target.GetObject()))
 		{
-			if ( !ntarget.IsOpen() )
+			if (!barrel.IsOpen())
 			{
-				ntarget.Open();
+				barrel.Open();
 			}
 		}
 	}

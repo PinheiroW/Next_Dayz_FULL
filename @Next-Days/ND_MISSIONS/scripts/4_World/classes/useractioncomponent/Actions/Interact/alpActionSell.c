@@ -1,23 +1,23 @@
 /**
  * alpActionSell.c
- * * AÇÃO DE INTERAÇÃO (VENDER PARA TRADER) - Módulo ND_MISSIONS
- * Gerencia a abertura do menu de venda e sincronização de estoque com NPCs.
+ * * USER INTERACTION (TRADER SELL MENU) - Módulo ND_MISSIONS
+ * Gerencia a abertura do menu de venda e sincronização de dados financeiros.
  */
 
 class alpActionSell: ActionInteractBase
 {
 	void alpActionSell()
 	{
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
+		m_CommandUID    = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
+		m_StanceMask    = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
 		m_HUDCursorIcon = CursorIcons.CloseHood;
 	}
 	
 	override void CreateConditionComponents()  
 	{
-		// CCTMan(4) define o raio de interação com o NPC (4 metros)
-		m_ConditionTarget = new CCTMan(4);
-		m_ConditionItem = new CCINone;
+		// CCTMan define a distância máxima de interação com o NPC Trader
+		m_ConditionTarget = new CCTMan(UAMaxDistances.DEFAULT);
+		m_ConditionItem   = new CCINone;
 	}
 
 	override string GetText()
@@ -25,20 +25,20 @@ class alpActionSell: ActionInteractBase
 		return "#trader_selling";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		// 1. Validação primária de estado do jogador
-		if ( !player || player.IsRestrained() ) return false;
+		// 1. Bloqueio se o jogador estiver impedido (ex: algemado)
+		if (!player || player.IsRestrained()) return false;
 
-		// 2. Validação do NPC (Alvo)
+		// 2. Validação do NPC Alvo
 		alpNPC ntarget;
-		if ( Class.CastTo(ntarget, target.GetObject()) )
+		if (Class.CastTo(ntarget, target.GetObject()))
 		{
-			// Verifica se o NPC está vivo, erguido e configurado com um estoque
-			if ( ntarget.IsAlive() && ntarget.IsErectedALP() && ntarget.alp_StockID > 0 )
+			// O NPC deve estar funcional e possuir estoque vinculado
+			if (ntarget.IsAlive() && ntarget.IsErectedALP() && ntarget.alp_StockID > 0)
 			{
-				// Verifica se este NPC específico permite vendas e se o jogador tem permissão de diálogo
-				if ( ntarget.CanSellingALP() && ntarget.CanSpeakWithMe(player) )
+				// Verifica flags de permissão de venda e compatibilidade de diálogo
+				if (ntarget.CanSellingALP() && ntarget.CanSpeakWithMe(player))
 				{
 					return true;
 				}
@@ -48,38 +48,39 @@ class alpActionSell: ActionInteractBase
 		return false;
 	}
 
-	override void OnExecuteServer( ActionData action_data )
+	override void OnExecuteServer(ActionData action_data)
 	{
 		alpNPC npc;
-		if ( Class.CastTo(npc, action_data.m_Target.GetObject()) )
+		if (Class.CastTo(npc, action_data.m_Target.GetObject()))
 		{
 			PlayerBase player = action_data.m_Player;
 			
-			// 1. Vincula o NPC ao carrinho de vendas do jogador
-			if ( player.GetRP() && player.GetRP().GetCart() )
+			// 1. Define o NPC alvo no carrinho para cálculo de preços de venda
+			if (player.GetRP() && player.GetRP().GetCart())
 			{
-				player.GetRP().GetCart().SetNPCid( npc.alp_StockID );
+				player.GetRP().GetCart().SetNPCid(npc.alp_StockID);
 			}
 
-			// 2. Sincroniza estatísticas e força atualização de dados de comércio
-			if ( player.GetSyncData() )
+			// 2. Atualiza a rede para garantir dados de reputação/saldo íntegros
+			if (player.GetSyncData())
 			{
-				player.GetSyncData().RegisterToStats( true );
+				player.GetSyncData().RegisterToStats(true);
 				player.GetSyncData().ForceSync();
 			}
 
-			// 3. Solicita o estoque de venda ao módulo central do Trader
-			if ( GetND() && GetND().GetMS() && GetND().GetMS().GetTrader() )
+			// 3. Solicita a sincronização de estoque para validar itens aceitos
+			auto traderCore = GetND().GetMS().GetTrader();
+			if (traderCore)
 			{
-				GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID, player );
+				traderCore.GiveMeStock(npc.alp_StockID, player);
 			}
 		}	
 	}
 
-	override void OnEndClient( ActionData action_data )
+	override void OnEndClient(ActionData action_data)
 	{
-		// LÓGICA MANTIDA: Abre a interface de comércio no cliente após a execução
-		if ( action_data.m_Player )
+		// Aciona a interface visual de venda no lado do cliente
+		if (action_data.m_Player)
 		{
 			action_data.m_Player.OpenTraderMenu();
 		}

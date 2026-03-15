@@ -1,15 +1,15 @@
 /**
  * alpActionIgniteDynamite.c
- * * AÇÃO CONTÍNUA CUSTOMIZADA (ACENDER DINAMITE)
- * Permite usar fontes de fogo para iniciar a detonação de dinamites.
+ * * CONTINUOUS ACTION (IGNITE DYNAMITE) - Módulo ND_MISSIONS
+ * Gerencia o acendimento de explosivos utilizando fontes de calor compatíveis.
  */
 
 class alpActionIgniteDynamiteCB : ActionContinuousBaseCB
 {
 	override void CreateActionComponent()
 	{
-		// LÓGICA MANTIDA: Tempo fixo de 3 segundos para ignição
-		m_ActionData.m_ActionComponent = new CAContinuousTime( 3 ); 
+		// Ciclo fixo de 3 segundos para representar o tempo de queima inicial do pavio
+		m_ActionData.m_ActionComponent = new CAContinuousTime(3); 
 	}
 }
 
@@ -17,18 +17,17 @@ class alpActionIgniteDynamite: ActionContinuousBase
 {
 	void alpActionIgniteDynamite()
 	{
-		m_CallbackClass = alpActionIgniteDynamiteCB;
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONFB_STARTFIRE;
-		m_FullBody = true;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_CROUCH;
-		
+		m_CallbackClass   = alpActionIgniteDynamiteCB;
+		m_CommandUID      = DayZPlayerConstants.CMD_ACTIONFB_STARTFIRE; // Animação de acender fogueira
+		m_FullBody        = true;
+		m_StanceMask      = DayZPlayerConstants.STANCEMASK_CROUCH;
 		m_SpecialtyWeight = UASoftSkillsWeight.ROUGH_HIGH;
 	}
 	
 	override void CreateConditionComponents()  
 	{	
-		m_ConditionTarget = new CCTNonRuined( UAMaxDistances.DEFAULT );
-		m_ConditionItem = new CCINonRuined;
+		m_ConditionTarget = new CCTNonRuined(UAMaxDistances.DEFAULT);
+		m_ConditionItem   = new CCINonRuined;
 	}
 		
 	override string GetText()
@@ -41,21 +40,20 @@ class alpActionIgniteDynamite: ActionContinuousBase
 		return true;
 	}
 	
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{	
-		// SEGURANÇA: Validação primária de existência
-		if ( !player || !target || !item ) return false;
+		if (!player || !target || !item) return false;
 
-		ItemBase target_item = ItemBase.Cast( target.GetObject() );
+		ItemBase target_item = ItemBase.Cast(target.GetObject());
 		
-		// LÓGICA MANTIDA: Verifica se o item na mão pode acender o alvo
-		if ( target_item && item.CanIgniteItem( target_item ) )
+		// Verifica se a ferramenta na mão (item) é capaz de gerar fogo para o alvo
+		if (target_item && item.CanIgniteItem(target_item))
 		{
 			alp_Dynamite_Base grenade;
-			if ( Class.CastTo(grenade, target_item) )
+			if (Class.CastTo(grenade, target_item))
 			{
-				// Só permite acender se a dinamite estiver "travada" (Pinned)
-				if ( grenade.IsPinned() )
+				// Condição lógica: Dinamite precisa estar em estado inicial (Pinned)
+				if (grenade.IsPinned())
 				{
 					return true;	
 				}
@@ -65,21 +63,21 @@ class alpActionIgniteDynamite: ActionContinuousBase
 		return false;
 	}
 
-	override void OnFinishProgressServer( ActionData action_data )
+	override void OnFinishProgressServer(ActionData action_data)
 	{	
-		if ( !action_data || !action_data.m_Target || !action_data.m_MainItem ) return;
+		if (!action_data || !action_data.m_Target || !action_data.m_MainItem) return;
 
-		ItemBase target_item = ItemBase.Cast( action_data.m_Target.GetObject() );
-		ItemBase item = action_data.m_MainItem;
+		ItemBase target_item = ItemBase.Cast(action_data.m_Target.GetObject());
+		ItemBase item        = action_data.m_MainItem;
 
-		if ( target_item && item )
+		if (target_item && item)
 		{
-			// Dispara os eventos de ignição em ambos os itens
-			target_item.OnIgniteItem( item );
-			item.OnIgniteTarget( target_item );
+			// Aciona a lógica de detonação e efeitos visuais no servidor
+			target_item.OnIgniteItem(item);
+			item.OnIgniteTarget(target_item);
 			
-			// Aplica bônus de SoftSkills ao jogador
-			action_data.m_Player.GetSoftSkillsManager().AddSpecialty( m_SpecialtyWeight );
+			// Progresso de Habilidades do Sobrevivente
+			action_data.m_Player.GetSoftSkillsManager().AddSpecialty(m_SpecialtyWeight);
 		}
 	}
-}; // Ponto e vírgula obrigatório para fechar a classe
+};

@@ -1,51 +1,47 @@
 /**
  * ActionConstructor.c
- * * REGISTRO GLOBAL DE AÇÕES - Módulo ND_MISSIONS
- * Este arquivo registra todas as ações customizadas no motor do jogo.
+ * * USER ACTION REGISTRATION - Módulo ND_MISSIONS
+ * Centraliza o registro de todas as ações customizadas de interação do mod.
  */
 
 modded class ActionConstructor
 {
+	/**
+	 * Registra as ações customizadas do Next-Days na lista global de ações do DayZ.
+	 */
 	override void RegisterActions(TTypenameArray actions)
 	{
-		// Garante que as ações nativas do DayZ sejam registradas primeiro
 		super.RegisterActions(actions);
 
-		if (!actions) return;
-
-		// --- CATEGORIA: VEÍCULOS E CHAVES ---
-		actions.Insert(alpLockVehicle);
-		actions.Insert(alpUnlockVehicle);
-		actions.Insert(alpCreateDuplicate);		
-		actions.Insert(alpLockpicking);
+		// --- Ações de Infraestrutura e Economia ---
+		actions.Insert(alpActionATM);                // Interação com Caixas Eletrônicos
+		actions.Insert(alpActionBuy);                // Ação de Compra no Trader
+		actions.Insert(alpActionSell);               // Ação de Venda no Trader
+		actions.Insert(alpActionServerConsole);      // Acesso ao Console de Servidor
 		
-		// --- CATEGORIA: INTERAÇÃO COM MUNDO (BARREIS / DINAMITE) ---
-		actions.Insert(alpActionOpenBarrel);
-		actions.Insert(alpActionCloseBarrel);
-		actions.Insert(alpActionDecontaminate);		
-		actions.Insert(alpActionDigInRadioactiveBarrel);
-		actions.Insert(alpActionIgniteDynamite);
-
-		// --- CATEGORIA: ECONOMIA E QUESTS (TRADER / ATM) ---
-		actions.Insert(alpActionBuy);
-		actions.Insert(alpActionSell);
-		actions.Insert(alpActionATM);			
-		actions.Insert(alpActionQuestBringMe);	
-
-		// --- CATEGORIA: SAÚDE E DESCONTAMINAÇÃO ---
-		actions.Insert(ActionDecontamineTarget);			
-		actions.Insert(ActionDecontamineSelf);		
+		// --- Ações de Missão e Eventos ---
+		actions.Insert(alpActionStartMission);       // Iniciar Missão via objeto
+		actions.Insert(alpActionQuestBringMe);       // Entrega de itens de Quest
 		
-		// --- CATEGORIA: MISSÕES E NPCs ---
-		actions.Insert(alpActionStartMission);	
-
-		// --- CATEGORIA: TERMINAIS DE SERVIDOR (CONSOLES) ---
-		actions.Insert(alpActionServerConsole);	
-		actions.Insert(alpActionServerConsoleLocked);	
-		actions.Insert(alpActionServerConsoleLock);
-		actions.Insert(alpActionServerConsoleUnlock);
-		actions.Insert(alpActionServerConsoleRepair);
-		actions.Insert(alpActionServerConsoleDownloadData);	
-		actions.Insert(alpActionServerConsoleDeleteData);	
+		// --- Ações de Ambiente e Sobrevivência ---
+		actions.Insert(alpActionDecontaminate);      // Uso do chuveiro de descontaminação
+		actions.Insert(alpActionDigInRadioactiveBarrel); // Mineração em barris radioativos
+		actions.Insert(alpActionOpenBarrel);         // Abrir barril customizado
+		actions.Insert(alpActionCloseBarrel);        // Fechar barril customizado
+		
+		// --- Ações de Tecnologia e Equipamento ---
+		actions.Insert(alpActionServerConsoleRepair);        // Reparo de Consoles
+		actions.Insert(alpActionServerConsoleLock);          // Trancar Console
+		actions.Insert(alpActionServerConsoleUnlock);        // Destrancar Console
+		actions.Insert(alpActionServerConsoleLocked);        // Estado Trancado
+		actions.Insert(alpActionServerConsoleDownloadData);  // Baixar Dados
+		actions.Insert(alpActionServerConsoleDeleteData);    // Deletar Dados
+		
+		// --- Ações de Manuseio de Itens ---
+		actions.Insert(alpActionIgniteDynamite);     // Acender Dinamite
+		actions.Insert(alpCreateduplicate);          // Criação de chaves/duplicatas
+		actions.Insert(alpLockvehicle);              // Trancar Veículo (Manual)
+		actions.Insert(alpUnlockvehicle);            // Destrancar Veículo (Manual)
+		actions.Insert(alpLockpicking);              // Arrombamento (Lockpick custom)
 	}
 }

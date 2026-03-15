@@ -1,15 +1,16 @@
 /**
  * alpLockpicking.c
- * * AÇÃO CONTÍNUA (ARROMBAR VEÍCULO) - Módulo ND_MISSIONS
- * Permite o uso de lockpicks para abrir carros, com restrições de zona e dano à ferramenta.
+ * * CONTINUOUS ACTION (VEHICLE LOCKPICKING) - Módulo ND_MISSIONS
+ * Permite o arrombamento de veículos com restrições de zona e desgaste de ferramenta.
  */
 
 class alpLockpickingCB : ActionContinuousBaseCB
 {
 	override void CreateActionComponent()
 	{
-		float time = 30.0; // Fallback de segurança (30s)
+		float time = 30.0; // Valor de segurança (fallback)
 		
+		// Consulta o tempo configurado nas opções de veículos do mod
 		if (GetND() && GetND().GetRP() && GetND().GetRP().GetVehicleOptions())
 		{
 			time = GetND().GetRP().GetVehicleOptions().TimeToForceOpen;
@@ -23,17 +24,17 @@ class alpLockpicking: ActionContinuousBase
 {
 	void alpLockpicking()
 	{
-		m_CallbackClass = alpLockpickingCB;
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONFB_INTERACT;
-		m_FullBody = true;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
+		m_CallbackClass   = alpLockpickingCB;
+		m_CommandUID      = DayZPlayerConstants.CMD_ACTIONFB_INTERACT;
+		m_FullBody        = true;
+		m_StanceMask      = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
 		m_SpecialtyWeight = UASoftSkillsWeight.PRECISE_HIGH;
 	}
 	
 	override void CreateConditionComponents()  
 	{	
 		m_ConditionTarget = new CCTNone;
-		m_ConditionItem = new CCINonRuined;
+		m_ConditionItem   = new CCINonRuined; // Gazua não pode estar quebrada
 	}
 		
 	override string GetText()
@@ -41,27 +42,27 @@ class alpLockpicking: ActionContinuousBase
 		return "#unlock";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		if( !player || !target || !item ) return false;
+		if (!player || !target || !item) return false;
 		
 		CarScript car;
 		CarDoor carDoor; 
 		Lockpick lockpick = Lockpick.Cast(item);
 		
-		// SEGURANÇA: Verifica se o lockpick e os módulos ND estão ativos
-		if ( !lockpick || !GetND() || !GetND().GetRP() ) return false;
+		// Validação de existência dos componentes do mod
+		if (!lockpick || !GetND() || !GetND().GetRP()) return false;
 		
 		auto vOptions = GetND().GetRP().GetVehicleOptions();
-		if ( !vOptions || !vOptions.EnableLocpicking ) return false;
+		if (!vOptions || !vOptions.EnableLocpicking) return false;
 
-		// LÓGICA MANTIDA: Verifica se o alvo é uma porta de um carro e se o carro está trancado
-		if ( Class.CastTo(carDoor, target.GetObject()) && Class.CastTo(car, target.GetParent()) )
+		// O alvo deve ser uma porta de um veículo trancado
+		if (Class.CastTo(carDoor, target.GetObject()) && Class.CastTo(car, target.GetParent()))
 		{
-			if ( car.GetInventory().IsInventoryLocked() )
+			if (car.GetInventory().IsInventoryLocked())
 			{
-				// Checagem de Trade Zone
-				if ( vOptions.DisableLocpickingInTradeZone && player.GetRP() && player.GetRP().IsInTradeZone() )
+				// Verificação de Zona Segura: Impede roubos em Trade Zones se configurado
+				if (vOptions.DisableLocpickingInTradeZone && player.GetRP() && player.GetRP().IsInTradeZone())
 				{
 					return false;
 				}
@@ -73,30 +74,33 @@ class alpLockpicking: ActionContinuousBase
 		return false;
 	}
 
-	override void OnFinishProgressServer( ActionData action_data )
+	override void OnFinishProgressServer(ActionData action_data)
 	{	
 		CarScript car;
 		Lockpick lockpick;
 		
-		if ( Class.CastTo(car, action_data.m_Target.GetParent()) && Class.CastTo(lockpick, action_data.m_MainItem) )
+		if (Class.CastTo(car, action_data.m_Target.GetParent()) && Class.CastTo(lockpick, action_data.m_MainItem))
 		{
-			// LÓGICA MANTIDA: Destranca o veículo e aplica dano ao lockpick
-			car.LockVehicleALP( false );	
+			// Transita o estado do veículo para DESTRANCADO
+			car.LockVehicleALP(false);	
 			
-			float damage = 20.0; // Padrão
+			// Aplica penalidade de integridade à ferramenta utilizada
+			float damage = 20.0; // Dano base padrão
 			if (GetND() && GetND().GetRP() && GetND().GetRP().GetVehicleOptions())
+			{
 				damage = GetND().GetRP().GetVehicleOptions().DamageLockpick;
+			}
 
 			lockpick.DecreaseHealth("", "", damage);	
 		}
 	}
 	
-	override void OnFinishProgressClient( ActionData action_data )
+	override void OnFinishProgressClient(ActionData action_data)
 	{
 		CarScript car;
-		if ( Class.CastTo(car, action_data.m_Target.GetParent()) )
+		if (Class.CastTo(car, action_data.m_Target.GetParent()))
 		{
-			// Executa efeito sonoro de sucesso no cliente
+			// Feedback sonoro local para o jogador que realizou o arrombamento
 			SEffectManager.PlaySoundOnObject("lockpick_success_SoundSet", car);
 		}
 	}

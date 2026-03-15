@@ -1,14 +1,14 @@
 /**
  * alpActionDecontaminate.c
- * * AÇÃO DE INTERAÇÃO (DESCONTAMINAÇÃO RADIOLÓGICA) - Módulo ND_MISSIONS
- * Permite ao jogador remover radiação acumulada utilizando chuveiros médicos.
+ * * USER INTERACTION (RADIOLOGICAL DECONTAMINATION) - Módulo ND_MISSIONS
+ * Permite ao jogador remover radiação acumulada utilizando infraestrutura médica.
  */
 
 class alpActionDecontaminateCB : ActionInteractLoopBaseCB
 {
 	override void CreateActionComponent()
 	{
-		// LÓGICA MANTIDA: Utiliza o tempo padrão de lavar as mãos para o ciclo de banho
+		// Mantém o ciclo de tempo baseado na ação de lavar as mãos (imersivo)
 		m_ActionData.m_ActionComponent = new CAInteractLoop(UATimeSpent.WASH_HANDS);
 	}
 };
@@ -17,15 +17,15 @@ class alpActionDecontaminate extends ActionInteractLoopBase
 {
 	void alpActionDecontaminate()
 	{
-		m_CallbackClass	= alpActionDecontaminateCB;
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONFB_WASHHANDSWELL; 
-		m_FullBody = true;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_CROUCH | DayZPlayerConstants.STANCEMASK_ERECT;
+		m_CallbackClass = alpActionDecontaminateCB;
+		m_CommandUID    = DayZPlayerConstants.CMD_ACTIONFB_WASHHANDSWELL; 
+		m_FullBody      = true;
+		m_StanceMask    = DayZPlayerConstants.STANCEMASK_CROUCH | DayZPlayerConstants.STANCEMASK_ERECT;
 	}
 
 	override void CreateConditionComponents()  
 	{
-		m_ConditionItem = new CCINone;
+		m_ConditionItem   = new CCINone;
 		m_ConditionTarget = new CCTObject(UAMaxDistances.DEFAULT);
 	}
 
@@ -34,11 +34,11 @@ class alpActionDecontaminate extends ActionInteractLoopBase
 		return "#action_decontamination";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		// OTIMIZAÇÃO: Verifica se o objeto alvo é o chuveiro médico via Cast (mais rápido que GetType)
+		// Verifica se o alvo é um chuveiro médico funcional
 		Land_Medical_Tent_Shower shower;
-		if ( Class.CastTo(shower, target.GetObject()) )
+		if (Class.CastTo(shower, target.GetObject()))
 		{
 			return true;
 		}
@@ -46,28 +46,28 @@ class alpActionDecontaminate extends ActionInteractLoopBase
 		return false;
 	}
 	
-	override void OnStartServer( ActionData action_data )
+	override void OnStartServer(ActionData action_data)
 	{
 		Land_Medical_Tent_Shower shower;
-		if ( Class.CastTo(shower, action_data.m_Target.GetObject()) )
+		if (Class.CastTo(shower, action_data.m_Target.GetObject()))
 		{
-			// LÓGICA MANTIDA: Ativa os efeitos de partículas e som do chuveiro
+			// Ativa os efeitos de partículas e áudio no servidor (replicado para os clientes)
 			shower.StartShower();
 		}
 	}
 	
-	override void OnEndServer( ActionData action_data )
+	override void OnEndServer(ActionData action_data)
 	{
 		Land_Medical_Tent_Shower shower;
-		if ( Class.CastTo(shower, action_data.m_Target.GetObject()) )
+		if (Class.CastTo(shower, action_data.m_Target.GetObject()))
 		{
-			// SEGURANÇA: Garante que o chuveiro pare de gastar recursos ao encerrar a ação
+			// Desliga os efeitos do objeto ao encerrar a interação
 			shower.StopShower();
 			
-			// LÓGICA MANTIDA: Aplica a cura de radiação ao finalizar o banho
-			if ( action_data.m_Player && action_data.m_Player.GetRP() )
+			// Aplica a redução da radiação no organismo do jogador
+			if (action_data.m_Player && action_data.m_Player.GetRP())
 			{
-				// Reduz a radiação em 20 unidades (ajustável via sistema de RP)
+				// Redução direta: Valor base ND de 20 unidades por ciclo
 				action_data.m_Player.GetRP().AddRadiation(-20.0);
 			}
 		}

@@ -1,97 +1,78 @@
 /**
- * alpActionServerConsoleLocked.c
- * * AÇÃO INFORMATIVA (CONSOLE BLOQUEADO) - Módulo ND_MISSIONS
- * Exibe no HUD qual cartão de acesso é necessário para interagir com o terminal.
+ * alpActionServerConsoleLock.c
+ * * USER INTERACTION (CONSOLE LOGOUT / LOCK) - Módulo ND_MISSIONS
+ * Protege o terminal de missão contra acesso público utilizando o cartão de acesso correto.
  */
 
-class alpActionServerConsoleLocked: ActionInteractBase
+class alpActionServerConsoleLock: ActionInteractBase
 {
-	string alp_Title;
-
-	void alpActionServerConsoleLocked()
+	void alpActionServerConsoleLock()
 	{
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
+		m_CommandUID    = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
+		m_StanceMask    = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
 		m_HUDCursorIcon = CursorIcons.CloseHood;
 	}
 
 	override void CreateConditionComponents()  
 	{
-		m_ConditionItem = new CCINone;
+		// O cartão deve estar em boas condições para interagir com o chip do terminal
+		m_ConditionItem   = new CCINonRuined;
 		m_ConditionTarget = new CCTObject(UAMaxDistances.DEFAULT);
 	}
 	
 	override string GetText()
 	{
-		return alp_Title;
+		return "#alp_action_console_logout";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		if ( !target || !target.GetObject() ) return false;
-
-		// Verifica se o jogador está mirando no painel de comando (Componente 1)
-		if ( target.GetComponentIndex() != 1 ) return false;
+		if (!target || !target.GetObject()) return false;
+		
+		// Validação geométrica: Foco obrigatório no painel de interface (Index 1)
+		if (target.GetComponentIndex() != 1) return false;
 
 		alp_ServerConsole console;
 		alp_AccessCard_Base card;
 		
-		if ( Class.CastTo(console, target.GetObject()) )
+		// Valida a hierarquia de classes do alvo e do item em mãos
+		if (Class.CastTo(console, target.GetObject()) && Class.CastTo(card, item))
 		{
-			Class.CastTo(card, item); // Tenta castar o item em mãos (pode ser nulo)
-
-			// Esta ação só é visível se:
-			// 1. O console for trancável e estiver atualmente TRANCADO.
-			// 2. O console não estiver destruído.
-			// 3. O jogador NÃO tem o cartão ou o cartão que tem NÃO é o ID correto.
-			if ( console.CanBeLockedALP() && console.IsLockedALP() && !console.IsRuinedALP() )
+			// Condições lógicas para o bloqueio:
+			// 1. O console está configurado para permitir bloqueio manual.
+			// 2. O terminal está atualmente desbloqueado.
+			// 3. O hardware não está arruinado ou danificado.
+			if (console.CanBeLockedALP() && console.IsUnlockedALP())
 			{
-				if ( !card || card.GetKeyID() != console.GetAccesCardID() )
+				if (!console.IsRuinedALP() && !console.IsDamagedALP())
 				{
-					// Lado do cliente: Prepara o texto informativo
-					if ( GetGame().IsClient() )
+					// Requisito de Segurança: O ID do cartão deve ser compatível com o do terminal
+					if (card.GetKeyID() == console.GetAccesCardID())
 					{
-						SetActionTextALP( console.GetAccesCardID() );
+						return true;
 					}
-					return true;
 				}
 			}
 		}
 		
 		return false;
 	}
-	
-	// Constrói a string do HUD: "Requer Cartão (Cor do Cartão)"
-	void SetActionTextALP(int id)
-	{
-		alp_Title = "#alp_action_console_requirescard"; // String base: "Requer Cartão"
-		
-		string cardColorName = "";
-		switch(id)
-		{
-			case 0:
-				cardColorName = alpUF.GetDisplayName("alp_AccessCardRed");
-				break;
-			case 1:
-				cardColorName = alpUF.GetDisplayName("alp_AccessCardBlue");
-				break;
-			case 2:
-				cardColorName = alpUF.GetDisplayName("alp_AccessCardYellow");
-				break;
-			case 3:
-				cardColorName = alpUF.GetDisplayName("alp_AccessCardGreen");
-				break;
-			case 4:
-				cardColorName = alpUF.GetDisplayName("alp_AccessCardBlack");
-				break;
-			default:
-				cardColorName = "???";
-				break;
-		}
-		
-		alp_Title += " (" + cardColorName + ")";
-	}
 
-	// Esta ação não executa nada no servidor, pois é apenas um aviso visual.
-	override void OnExecuteServer( ActionData action_data ) {}
+	override void OnExecuteServer(ActionData action_data)
+	{
+		if (!action_data || !action_data.m_Target) return;
+
+		alp_ServerConsole console;
+		alp_AccessCard_Base card;
+		
+		// Execução segura no servidor com revalidação de identidade
+		if (Class.CastTo(console, action_data.m_Target.GetObject()) && Class.CastTo(card, action_data.m_MainItem))
+		{
+			if (card.GetKeyID() == console.GetAccesCardID())
+			{
+				// Transita o estado lógico para TRANCADO (Replicado para todos os clientes)
+				console.LockALP(true);
+			}
+		}
+	}
 };

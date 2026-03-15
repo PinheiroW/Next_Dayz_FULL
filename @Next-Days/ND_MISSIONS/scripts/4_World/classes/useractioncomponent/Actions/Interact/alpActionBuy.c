@@ -1,6 +1,6 @@
 /**
  * alpActionBuy.c
- * * AÇÃO DE INTERAÇÃO (ABRIR TRADER) - Módulo ND_MISSIONS
+ * * USER INTERACTION (TRADER BUY MENU) - Módulo ND_MISSIONS
  * Gerencia a abertura do menu de compra e sincronização de estoque com NPCs.
  */
 
@@ -8,16 +8,16 @@ class alpActionBuy: ActionInteractBase
 {
 	void alpActionBuy()
 	{
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
+		m_CommandUID    = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
+		m_StanceMask    = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
 		m_HUDCursorIcon = CursorIcons.CloseHood;
 	}
 	
 	override void CreateConditionComponents()  
 	{
-		// CCTMan(4) define o raio de interação com o NPC
+		// CCTMan define a interação direta com o objeto da entidade (NPC)
 		m_ConditionTarget = new CCTMan(UAMaxDistances.DEFAULT);
-		m_ConditionItem = new CCINone;
+		m_ConditionItem   = new CCINone;
 	}
 
 	override string GetText()
@@ -25,20 +25,20 @@ class alpActionBuy: ActionInteractBase
 		return "#trader_buing";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		// 1. Validação primária de estado do jogador
-		if ( !player || player.IsRestrained() ) return false;
+		// 1. Bloqueio se o jogador estiver impossibilitado
+		if (!player || player.IsRestrained()) return false;
 
-		// 2. Validação do NPC (Alvo)
+		// 2. Validação do NPC Alvo
 		alpNPC ntarget;
-		if ( Class.CastTo(ntarget, target.GetObject()) )
+		if (Class.CastTo(ntarget, target.GetObject()))
 		{
-			// Verifica se o NPC está vivo, em posição de interação e possui um estoque válido
-			if ( ntarget.IsAlive() && ntarget.IsErectedALP() && ntarget.alp_StockID > 0 )
+			// O NPC precisa estar funcional para permitir o comércio
+			if (ntarget.IsAlive() && ntarget.IsErectedALP() && ntarget.alp_StockID > 0)
 			{
-				// Verifica condições customizadas de fala e permissão de compra
-				if ( ntarget.CanBuingALP() && CanSpeakWithMe(ntarget, player) )
+				// Verifica flags de permissão de compra e alinhamento de Roleplay
+				if (ntarget.CanBuingALP() && CanSpeakWithMe(ntarget, player))
 				{
 					return true;
 				}
@@ -48,36 +48,40 @@ class alpActionBuy: ActionInteractBase
 		return false;
 	}
 
-	// Lógica de expansão para sistemas de reputação ou facções
+	/**
+	 * Verifica a compatibilidade social entre o jogador e o NPC.
+	 */
 	bool CanSpeakWithMe(alpNPC npc, PlayerBase player)
 	{
-		if ( !npc || !player ) return false;
+		if (!npc || !player) return false;
 		return npc.CanSpeakWithMe(player);
 	}
 	
-	override void OnExecuteServer( ActionData action_data )
+	override void OnExecuteServer(ActionData action_data)
 	{
 		alpNPC npc;
-		if ( Class.CastTo(npc, action_data.m_Target.GetObject()) )
+		if (Class.CastTo(npc, action_data.m_Target.GetObject()))
 		{
 			PlayerBase player = action_data.m_Player;
 			
-			// 1. Vincula o NPC atual ao carrinho de compras do jogador
-			if ( player.GetRP() && player.GetRP().GetCart() )
+			// 1. Configura o contexto do Trader no carrinho do jogador
+			if (player.GetRP() && player.GetRP().GetCart())
 			{
-				player.GetRP().GetCart().SetNPCid( npc.alp_StockID, npc.alp_IDmission );
+				player.GetRP().GetCart().SetNPCid(npc.alp_StockID, npc.alp_IDmission);
 			}
 
-			// 2. Sincroniza dados e solicita o estoque ao módulo Trader
-			if ( player.GetSyncData() )
+			// 2. Prepara a rede: Ativa estatísticas de alta precisão e sincroniza
+			if (player.GetSyncData())
 			{
-				player.GetSyncData().RegisterToStats( true );
+				player.GetSyncData().RegisterToStats(true);
 				player.GetSyncData().ForceSync();
 			}
 
-			if ( GetND() && GetND().GetMS() && GetND().GetMS().GetTrader() )
+			// 3. Solicita a lista de itens (Stock) ao núcleo do Trader
+			auto traderCore = GetND().GetMS().GetTrader();
+			if (traderCore)
 			{
-				GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID, player );
+				traderCore.GiveMeStock(npc.alp_StockID, player);
 			}
 		}		
 	}

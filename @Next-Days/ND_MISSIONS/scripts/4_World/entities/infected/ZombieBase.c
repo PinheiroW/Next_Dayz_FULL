@@ -1,28 +1,28 @@
 /**
  * ZombieBase.c
- * * MODDED ENTITY (INFECTADOS) - Módulo ND_MISSIONS
- * Gerencia o tempo de vida de zumbis de missão e proteção contra ataques em SafeZones.
+ * * MODDED ENTITY (INFECTED) - Módulo ND_MISSIONS
+ * Gerencia o ciclo de vida de entidades de missão e a integridade de SafeZones.
  */
 
 modded class ZombieBase extends DayZInfected
 {
-	// Define um tempo de vida padrão quase infinito para zumbis nativos
-	float m_LifeTimeZed = 2147483647; // int.MAX - 1
+	// Cronómetro de vida (Fallback para valor máximo para evitar morte de zumbis nativos)
+	protected float m_LifeTimeZed = 2147483647; 
 	
 	/**
-	 * Handler chamado após o processamento de comandos de movimento/animação.
-	 * Utilizado aqui para gerenciar o cronômetro de vida da entidade.
+	 * Atualização lógica por frame de animação.
+	 * Gerencia a contagem regressiva para expiração da entidade.
 	 */
 	override bool ModCommandHandlerAfter(float pDt, int pCurrentCommandID, bool pCurrentCommandFinished)
 	{
 		bool ret = super.ModCommandHandlerAfter(pDt, pCurrentCommandID, pCurrentCommandFinished);	
 		
-		// Reduz o tempo de vida baseado no tempo decorrido
+		// Processa o tempo de vida baseado no tempo real decorrido
 		m_LifeTimeZed -= pDt;
 		
-		if ( IsAlive() && m_LifeTimeZed <= 0 )
+		if (IsAlive() && m_LifeTimeZed <= 0)
 		{
-			// Mata o zumbi silenciosamente se o tempo expirar (limpeza de missão)
+			// Eliminação silenciosa por expiração de tempo (Cleanup de Missão)
 			SetHealth("", "", 0);
 		}				
 		
@@ -30,7 +30,8 @@ modded class ZombieBase extends DayZInfected
 	}
 	
 	/**
-	 * Define manualmente um tempo de vida (usado pelo sistema de missões ao spawnar).
+	 * Define o tempo de persistência desta entidade no mundo.
+	 * @param t: Tempo em segundos.
 	 */
 	void SetLifeTimeZed(float t)
 	{
@@ -38,27 +39,28 @@ modded class ZombieBase extends DayZInfected
 	}
 	
 	/**
-	 * Lógica de ataque: Intercepta tentativas de ataque contra jogadores em SafeZones.
+	 * Intercepta a lógica de ataque para aplicar regras de SafeZone.
 	 */
 	override bool FightAttackLogic(int pCurrentCommandID, DayZInfectedInputController pInputController, float pDt)
 	{
-		// Verifica se a proteção de SafeZone está ativa nas configurações
 		auto traderOptions = GetND().GetMS().GetOptoinsTrader();
-		if ( traderOptions && traderOptions.KillZombiesWhileAttackAtTrader )
+		
+		// Verifica se a punição para invasores de SafeZone está ativa
+		if (traderOptions && traderOptions.KillZombiesWhileAttackAtTrader)
 		{
 			EntityAI target = pInputController.GetTargetEntity();
 			PlayerBase player;
 			
-			// Se o alvo for um jogador e ele estiver sob proteção de "No Damage" (Trader)
-			if ( Class.CastTo(player, target) && !player.GetRP().IsAllowedDamage() )
+			// Se o alvo for um jogador protegido pelo sistema de RP do Next-Days
+			if (Class.CastTo(player, target) && player.GetRP() && !player.GetRP().IsAllowedDamage())
 			{
-				// Limpa referências de alvos para evitar erros de processamento no motor
+				// Limpa a lista de alvos para evitar conflitos na IA antes da morte
 				m_AllTargetObjects.Clear();
 				
-				// O zumbi morre instantaneamente ao tentar violar a SafeZone
+				// Executa a morte instantânea do infectado ao violar a área de paz
 				SetHealth01("", "", 0);
 				
-				return false; // Interrompe o ataque
+				return false; // Bloqueia a execução do golpe
 			}
 		}
 		

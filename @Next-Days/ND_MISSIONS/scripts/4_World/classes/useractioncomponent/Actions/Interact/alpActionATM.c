@@ -1,6 +1,6 @@
 /**
  * alpActionATM.c
- * * AÇÃO DE INTERAÇÃO (CAIXA ELETRÔNICO / ATM) - Módulo ND_MISSIONS
+ * * USER INTERACTION (ATM/BANK) - Módulo ND_MISSIONS
  * Gerencia o acesso a contas bancárias, validação de cartões e biometria.
  */
 
@@ -8,7 +8,7 @@ class alpActionATMCB : ActionInteractLoopBaseCB
 {
 	override void CreateActionComponent()
 	{
-		// LÓGICA MANTIDA: Loop de interação de 2 segundos para acessar o terminal
+		// Ciclo de interação de 2 segundos para representar o tempo de login no terminal
 		m_ActionData.m_ActionComponent = new CAInteractLoop(2);
 	}
 };
@@ -17,15 +17,15 @@ class alpActionATM extends ActionInteractLoopBase
 {
 	void alpActionATM()
 	{
-		m_CallbackClass	= alpActionATMCB;
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONFB_VIEWNOTE; 
-		m_FullBody = true;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_CROUCH | DayZPlayerConstants.STANCEMASK_ERECT;
+		m_CallbackClass = alpActionATMCB;
+		m_CommandUID    = DayZPlayerConstants.CMD_ACTIONFB_VIEWNOTE; 
+		m_FullBody      = true;
+		m_StanceMask    = DayZPlayerConstants.STANCEMASK_CROUCH | DayZPlayerConstants.STANCEMASK_ERECT;
 	}
 
 	override void CreateConditionComponents()  
 	{
-		m_ConditionItem = new CCINone;
+		m_ConditionItem   = new CCINone;
 		m_ConditionTarget = new CCTObject(UAMaxDistances.DEFAULT);
 	}
 
@@ -34,22 +34,22 @@ class alpActionATM extends ActionInteractLoopBase
 		return "#action_atm";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		if ( !player || !target.GetObject() ) return false;
+		if (!player || !target.GetObject()) return false;
 		
-		// 1. Verifica se o servidor permite acesso sem cartão (Biometria/GUID)
-		if ( GetND() && GetND().GetMS() && GetND().GetMS().GetOptoinsTrader() )
+		// 1. Verifica se o servidor permite acesso direto (Biometria por GUID)
+		if (GetND() && GetND().GetMS() && GetND().GetMS().GetOptoinsTrader())
 		{
-			if ( GetND().GetMS().GetOptoinsTrader().ATM_NotRequiresPaymentCard )
+			if (GetND().GetMS().GetOptoinsTrader().ATM_NotRequiresPaymentCard)
 			{
 				return true;
 			}
 		}
 		
-		// 2. Verifica se o jogador está segurando um cartão de débito válido
+		// 2. Caso exija cartão, verifica se o jogador está segurando um cartão de débito
 		alp_Debitcard card;			
-		if ( Class.CastTo( card, player.GetItemInHands() ) )
+		if (Class.CastTo(card, player.GetItemInHands()))
 		{
 			return true;
 		}
@@ -57,47 +57,48 @@ class alpActionATM extends ActionInteractLoopBase
 		return false;
 	}
 	
-	override void OnStartServer( ActionData action_data )
+	override void OnStartServer(ActionData action_data)
 	{
-		if ( !action_data || !action_data.m_Player ) return;
+		if (!action_data || !action_data.m_Player) return;
 
 		auto traderMod = GetND().GetMS();
-		if ( !traderMod ) return;
+		if (!traderMod) return;
 
-		// CASO A: Acesso por Biometria (Sem Cartão)
-		if ( traderMod.GetOptoinsTrader().ATM_NotRequiresPaymentCard )
+		// LÓGICA DE AUTENTICAÇÃO
+		if (traderMod.GetOptoinsTrader().ATM_NotRequiresPaymentCard)
 		{
-			if ( action_data.m_Player.GetPlayerHive() )
+			// Acesso por GUID do Jogador
+			if (action_data.m_Player.GetPlayerHive())
 			{
-				int guid2 = action_data.m_Player.GetPlayerHive().GetPlayerID();
-				traderMod.GetTrader().GiveMeAccount( guid2 , action_data.m_Player );	
+				int playerID = action_data.m_Player.GetPlayerHive().GetPlayerID();
+				traderMod.GetTrader().GiveMeAccount(playerID, action_data.m_Player);	
 			}
-			return;
 		}				
-		
-		// CASO B: Acesso via Cartão Físico
-		alp_Debitcard card;			
-		if ( Class.CastTo( card, action_data.m_Player.GetItemInHands() ) )
+		else
 		{
-			if ( action_data.m_Player.GetPlayerHive() )
+			// Acesso por Cartão Físico
+			alp_Debitcard card;			
+			if (Class.CastTo(card, action_data.m_Player.GetItemInHands()))
 			{
-				// Se o cartão é novo (ID 0), vincula ao jogador atual
-				if ( !card.alp_CARD_ID )
+				if (action_data.m_Player.GetPlayerHive())
 				{
-					int guid = action_data.m_Player.GetPlayerHive().GetPlayerID();
-					card.alp_CARD_ID = guid;
+					// Vincula cartão novo ao jogador se necessário
+					if (!card.alp_CARD_ID)
+					{
+						card.alp_CARD_ID = action_data.m_Player.GetPlayerHive().GetPlayerID();
+					}
+					
+					// Solicita os dados da conta vinculada ao cartão
+					traderMod.GetTrader().GiveMeAccount(card.alp_CARD_ID, action_data.m_Player);
 				}
-				
-				// Solicita os dados da conta ao banco de dados
-				traderMod.GetTrader().GiveMeAccount( card.alp_CARD_ID, action_data.m_Player );
 			}
 		}
 	}
 	
-	override void OnEndClient( ActionData action_data )
+	override void OnEndClient(ActionData action_data)
 	{
-		// Abre a interface visual (UI) para o jogador no lado do cliente
-		if ( action_data && action_data.m_Player )
+		// Abre a interface de usuário (UI) após a conclusão do loop
+		if (action_data && action_data.m_Player)
 		{
 			action_data.m_Player.OpenBankMenu();
 		}

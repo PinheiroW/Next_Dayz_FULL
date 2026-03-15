@@ -1,37 +1,37 @@
 /**
  * weapon_base.c
- * * MODDED ENTITY (BASE DE ARMAS) - Módulo ND_MISSIONS
- * Integra o disparo de armas ao sistema de Reputação e Crimes (Echo System).
+ * * MODDED ENTITY (FIREARMS BASE) - Módulo ND_MISSIONS
+ * Integra o uso de armamento ao sistema de Reputação, Dívidas e Rastreamento de Crimes.
  */
 
 modded class Weapon_Base extends Weapon
 {
 	/**
-	 * Evento disparado sempre que a arma efetua um disparo.
+	 * Handler de evento acionado em cada ciclo de disparo da arma.
 	 */
 	override void EEFired(int muzzleType, int mode, string ammoType)
 	{	
-		// Executa primeiro a lógica padrão do jogo (DayZ Vanilla)
+		// Preserva a funcionalidade balística e sonora original do motor DayZ
 		super.EEFired(muzzleType, mode, ammoType);
 		
-		// Lógica Next-Days: Monitoramento de Devedores e Sistema Echo
+		// Lógica de monitoramento de crimes (Lado Servidor)
 		if (GetGame().IsServer())
 		{
 			PlayerBase player = PlayerBase.Cast(GetHierarchyRootPlayer());
 			
-			// Verifica se quem disparou é um jogador e se possui pendências bancárias
+			// Verifica se o atirador é um sobrevivente e se possui pendências no sistema financeiro
 			if (player && player.GetRP() && player.GetRP().IsDebtor())
 			{
-				// Evita spam de registros se o sistema estiver em cooldown
+				// Otimização: Só processa o alerta se o sistema Echo não estiver em tempo de espera (Cooldown)
 				if (!player.GetRP().IsEchoCoolDown())
 				{
-					// Se o jogador estiver com esta arma em mãos (confirmação de posse)
+					// Validação de segurança: Confirma que a arma disparada é a que está nas mãos do jogador
 					if (player.GetItemInHands() == this)
 					{
-						// Verifica acessórios (Supressores alteram a detecção do Echo)
+						// Identifica a presença de supressores para modular a detecção do crime
 						ItemBase suppressor = GetAttachedSuppressor();
 					
-						// Registra o disparo no sistema de procurados do banco
+						// Reporta o disparo ao sistema de segurança bancário (Most Wanted System)
 						player.GetRP().MakeEchoWatnedPerson(suppressor, alpMOST_WANTED.BANK);
 					}
 				}

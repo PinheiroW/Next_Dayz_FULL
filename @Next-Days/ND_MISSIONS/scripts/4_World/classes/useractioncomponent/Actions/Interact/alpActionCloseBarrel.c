@@ -1,15 +1,15 @@
 /**
  * alpActionCloseBarrel.c
- * * AÇÃO DE INTERAÇÃO (FECHAR BARRIL RADIOATIVO) - Módulo ND_MISSIONS
- * Permite fechar o barril se ele não estiver trancado e estiver aberto.
+ * * USER INTERACTION (CLOSE RADIOACTIVE BARREL) - Módulo ND_MISSIONS
+ * Gerencia o fechamento físico de barris radioativos, validando estados de trava.
  */
 
 class alpActionCloseBarrel : ActionInteractBase
 {
 	void alpActionCloseBarrel()
 	{
-		m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
-		m_StanceMask = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
+		m_CommandUID    = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
+		m_StanceMask    = DayZPlayerConstants.STANCEMASK_ERECT | DayZPlayerConstants.STANCEMASK_CROUCH;
 		m_HUDCursorIcon = CursorIcons.CloseHood;
 	}
 
@@ -18,16 +18,16 @@ class alpActionCloseBarrel : ActionInteractBase
 		return "#close";
 	}
 
-	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
+	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		if ( !target ) return false;
+		if (!target) return false;
 
-		alp_Radioactive_Barrel ntarget;
-		// LÓGICA MANTIDA: Tenta converter o objeto alvo para um barril radioativo
-		if ( Class.CastTo(ntarget, target.GetObject()) )
+		alp_Radioactive_Barrel barrel;
+		// Tenta converter o objeto alvo para a classe de barril do mod
+		if (Class.CastTo(barrel, target.GetObject()))
 		{
-			// Só permite fechar se o barril estiver aberto E não estiver trancado (pelo sistema de chaves/lock)
-			if ( ntarget.IsOpen() && !ntarget.IsLocked() )
+			// Condição: O barril deve estar ABERTO e não pode estar trancado
+			if (barrel.IsOpen() && !barrel.IsLocked())
 			{
 				return true;
 			}
@@ -36,20 +36,18 @@ class alpActionCloseBarrel : ActionInteractBase
 		return false;
 	}
 
-	override void OnExecuteServer( ActionData action_data )
+	override void OnExecuteServer(ActionData action_data)
 	{
-		if ( !action_data || !action_data.m_Target ) return;
+		if (!action_data || !action_data.m_Target) return;
 
-		alp_Radioactive_Barrel ntarget;
-		// Executa o comando de fechar no servidor
-		if ( Class.CastTo(ntarget, action_data.m_Target.GetObject()) )
+		alp_Radioactive_Barrel barrel;
+		// Executa a transição lógica para FECHADO no servidor para fins de sincronização
+		if (Class.CastTo(barrel, action_data.m_Target.GetObject()))
 		{
-			if ( ntarget.IsOpen() )
+			if (barrel.IsOpen())
 			{
-				ntarget.Close();
+				barrel.Close();
 			}
 		}
 	}
-	
-	// OnEndServer e OnEndClient foram omitidos por serem redundantes nesta ação simples
 };
