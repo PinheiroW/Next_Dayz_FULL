@@ -1,0 +1,40 @@
+📑 Relatório de Auditoria Técnica: Módulo ND_Creatures
+1. Performance e Otimização de Recursos
+A principal evolução do módulo foi a transição de processos "reativos por frame" para processos "agendados e cacheados":
+
+Controle de Ciclos de IA (Ticks): No arquivo zombiebase.c, a detecção de portas e obstáculos, que antes sobrecarregava o servidor ao rodar em cada tick da engine, foi limitada por um timer de 2 segundos. Isso libera ciclos vitais da CPU para outras tarefas do servidor.
+
+Gestão de Memória e I/O: Refatoramos o alpCreaturesPlugin.c para utilizar o padrão Singleton com cache em RAM. As configurações JSON de criaturas são lidas uma única vez no início da sessão, eliminando as micro-travas (stutters) que ocorriam durante o spawn de entidades no mundo.
+
+Otimização Matemática: Substituímos operações de Distance por DistanceSq em verificações de zona no alpPluginNDmissionsSystem.c. Ao evitar o cálculo desnecessário de raízes quadradas em loops constantes, reduzimos significativamente o custo computacional de geofencing.
+
+Cache de Instância: No alpND.c, implementamos o acesso direto via variável de cache para o plugin de criaturas, removendo a necessidade de buscas repetitivas em listas globais e operações pesadas de Cast.
+
+2. Estabilidade, Segurança e Integridade
+O código foi blindado contra as causas mais comuns de encerramento inesperado do servidor (Crashes):
+
+Prevenção de NPE (Null Pointer Exception): Aplicamos verificações de validade (Null Checks) e validações de conversão (Safe Casts) em classes críticas como zombiebase.c e PlayerBase.c. O servidor agora ignora pacotes corrompidos ou referências nulas em vez de interromper a execução.
+
+Lógica Server-Side: No alpMission.c, reforçamos a autoridade do servidor, garantindo que as restrições de IA e estados de missão não possam ser manipulados ou ignorados por scripts do lado do cliente.
+
+Consistência de Dados: Corrigimos erros ortográficos em variáveis de configuração no alpCreaturesOptions.c e inicializamos todos os arrays de forma segura para evitar acessos a índices de memória inválidos.
+
+3. Refatoração por Componente
+zombiebase.c: Refatoração completa do sistema de interação com portas e implementação de uma nova camada de armadura e multiplicadores de dano customizados, permitindo maior controle sobre a dificuldade dos inimigos.
+
+AnimalBase.c: A lógica de inicialização foi movida para o evento EEInit, garantindo que validações de atributos ocorram no momento exato do spawn, otimizando o ciclo de vida da entidade.
+
+zombiemalebase.c: Centralização da lógica de zumbis NBC e trajes contaminados, tornando o sistema modular e facilitando a adição de novas variantes de inimigos protegidos.
+
+PlayerBase.c: Integração nativa e corrigida com os agentes de Radiação e Químicos, garantindo que as criaturas apliquem doenças corretamente de acordo com a resistência do jogador.
+
+⚠️ Observações Finais sobre o Módulo ND_Creatures
+Após a conclusão desta auditoria, o módulo ND_Creatures atingiu um estado de Excelência Técnica. Diferente da versão anterior, que apresentava riscos de degradação de performance conforme o número de entidades crescia, a arquitetura atual é escalável.
+
+Pontos de Destaque:
+
+Escalabilidade: O sistema agora suporta uma densidade muito maior de zumbis e animais sem afetar o Server FPS, graças ao novo sistema de timers e cache.
+
+Modularidade: A estrutura de agentes e multiplicadores de dano permite que futuros desenvolvedores adicionem novas criaturas apenas via configuração, sem precisar reescrever a lógica base do código.
+
+Compatibilidade: A limpeza de classes redundantes e a padronização das chamadas garantem que o módulo funcione em harmonia com os outros sistemas que auditamos anteriormente, como o de Sincronização e Interface.
