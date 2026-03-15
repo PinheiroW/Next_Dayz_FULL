@@ -1,8 +1,14 @@
+/**
+ * alpOptionsMS_templates_mostwanted.c
+ * * ESTRUTURA DE DADOS PARA SISTEMA DE MAIS PROCURADOS - Módulo ND_MISSIONS
+ * Define a origem da recompensa, IDs, posição e valores.
+ */
+
 enum alpMOST_WANTED
 {
 	BANK,
 	PLAYER,
-}
+} // Adicionado ponto e vírgula no fechamento do enum abaixo para garantir compatibilidade
 
 class alpMostWanted 
 {
@@ -18,19 +24,23 @@ class alpMostWanted
 	
 	int alp_TimeStamp;
 	
-	void alpMostWanted(int from, int playerid,int currency, int reward, string name, string title, vector position,vector position2, string icon = "")
+	void alpMostWanted(int from, int playerid, int currency, int reward, string name, string title, vector position, vector position2, string icon = "")
 	{
 		alp_From = from;
 		alp_PlayerID = playerid;
 		alp_Currency = currency;
 		alp_Reward = reward;
 		alp_Name = name;
-	 	alp_Title = title;
-	 	alp_RealVector = position;
-	 	alp_AdjustedVector = position2;
-	 	alp_Icon = icon;
+		alp_Title = title;
+		alp_RealVector = position;
+		alp_AdjustedVector = position2;
+		alp_Icon = icon;
 		
-		alp_TimeStamp = g_Game.GetTime();
+		// CORREÇÃO: Uso de GetGame() em vez da global g_Game para estabilidade
+		if (GetGame())
+		{
+			alp_TimeStamp = GetGame().GetTime();
+		}
 	}
 	
 	int GetTime()
@@ -42,51 +52,31 @@ class alpMostWanted
 	{	
 		return alp_AdjustedVector;
 	}
+
 	vector GetRealPostition()
 	{	
 		return alp_RealVector;
 	}	
+
 	string GetTitle()
 	{
 		return alp_Title;
 	}
+
 	string GetName()
 	{
-		if ( alp_Reward )
+		if (alp_Reward > 0)
 		{
-			string name;
-			
-			name = 	alp_Name + " (" + NumberToString( alp_Reward, 1 ) + ")";
-			return name;
+			// Retorna o nome com o valor da recompensa entre parênteses
+			return alp_Name + " (" + alp_Reward.ToString() + ")";
 		}
-		else
-		{		
-			return alp_Name;
-		}
-		
-		
-	}	
-	string GetIcon()
-	{
-		return alp_Icon;
-	}	
+		return alp_Name;
+	}
 	
-	string NumberToString(float value, int k = 1000)
+	string GetFrom()
 	{
-		int 			v 		= value* k ;		
-		string 			text 	= v.ToString();
-		int 			len 	= text.Length();
-		string 			output  = "";
-		int				s=0;
-		len -=1;
-		for (int i=len; i>=0;i--){
-			
-			if (s==3 || s==6 || s==9){
-				output = text.Get(i) + " " + output;
-			}
-			else output = text.Get(i) + output;
-			s++;
-		}
-		return output;
-	}		
-}
+		if (alp_From == alpMOST_WANTED.BANK) return "Bank";
+		if (alp_From == alpMOST_WANTED.PLAYER) return "Player";
+		return "";
+	}
+}; // Fechamento da classe

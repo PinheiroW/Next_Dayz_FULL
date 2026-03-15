@@ -1,4 +1,9 @@
-// Script File
+/**
+ * rModifiers.c
+ * * Identificadores únicos para o sistema de Modificadores (Modifiers)
+ * Responsável por gerenciar estados como Radiação, Sickness e Fadiga.
+ */
+
 enum rModifiers 
 {
 	MDF_ALPRADIATION = 154001,
@@ -14,5 +19,5 @@ enum rModifiers
 	MDF_SLEEPING,
 	MDF_DRUNKENNESS,
 	MDF_IMMUNITY_INFLUENZA,
-	COUNT,
-}
+	COUNT
+}; // Adicionado ponto e vírgula obrigatório

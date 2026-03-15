@@ -1,6 +1,5 @@
 modded class SyncPlayer
-{/*
-	string m_UID;
-	string m_PlayerName;*/
+{
 	int m_PlayerUniqueID;
+	ref PlayerIdentity m_Identity; // Necessário para a sincronização na lista de jogadores
 }
