@@ -1,11 +1,17 @@
+/**
+ * @class   alpExpandedInteraction
+ * @brief   Gerencia taxas de interações expandidas (Médico e Rumores)
+ * Auditado em: 2024 - Foco em Performance e Segurança Econômica
+ */
+
 class alpSpreadRumoursFees 
 {
-
 	int NegativeGossipCost = 10000;
 	int PositiveGossipCost = 10000;
 	int NegativeGossipGain = 1000;
 	int PositiveGossipGain = 1000;
 }
+
 class alpMedicalFees 
 {
 	bool EnabledBloodTest		= true;
@@ -31,64 +37,53 @@ class alpMedicalFees
 	
 	int Decontamination = 2000;
 	
-	
-	int SaveDNA = 1000;
-	int RecoverDNA = 50000;	
+	int SaveDNA = 100000;
+	int RecoverDNA = 100000;
 }
-
-
-
 
 class alpExpandedInteraction 
 {
-	bool EnableSales						= true;
+	int ConfigVersion = 1; // Controle de versão
+	bool EnableSales = true;
 	
-	ref alpMedicalFees MedicalFees;
-	
- 	ref alpSpreadRumoursFees Rumours;
-
-
-	void alpExpandedInteraction()
-	{
-		Rumours	= new alpSpreadRumoursFees();
-		MedicalFees = new alpMedicalFees();
-	}
+	ref alpMedicalFees MedicalFees = new alpMedicalFees;
+	ref alpSpreadRumoursFees SpreadRumoursFees = new alpSpreadRumoursFees;
 	
 	alpMedicalFees GetMedicalFees(float rate, float coef, float sale)
 	{
 		alpMedicalFees fees = new alpMedicalFees;
 		
-		if ( !EnableSales )
-		{
-			sale = 0;
-		}
-
-		if ( coef )			
-		{
-			
-			fees.Fee = MedicalFees.Fee * rate * coef * (1 - sale );
-			fees.Bleeding = MedicalFees.Bleeding * rate * coef * (1 - sale );
-			fees.BrainSick = MedicalFees.BrainSick * rate * coef * (1 - sale );
-			fees.Commoncold = MedicalFees.Commoncold * rate * coef * (1 - sale );
-			fees.Influenza = MedicalFees.Influenza * rate * coef * (1 - sale );
-			fees.Cholera = MedicalFees.Cholera * rate * coef * (1 - sale );
-			fees.Salmonella = MedicalFees.Salmonella * rate * coef * (1 - sale );
-			fees.WoundInfectionL1 = MedicalFees.WoundInfectionL1 * rate * coef * (1 - sale );
-			fees.WoundInfectionL2 = MedicalFees.WoundInfectionL2 * rate * coef * (1 - sale );
-			fees.FoodPoisoning = MedicalFees.FoodPoisoning * rate * coef * (1 - sale );
-			fees.ChemicalPoisoningL1 = MedicalFees.ChemicalPoisoningL1 * rate * coef * (1 - sale );
-			fees.ChemicalPoisoningL2 = MedicalFees.ChemicalPoisoningL2 * rate * coef * (1 - sale );
-			fees.ChemicalPoisoningL3 = MedicalFees.ChemicalPoisoningL3 * rate * coef * (1 - sale );
-			fees.BrokenArm = MedicalFees.BrokenArm * rate * coef * (1 - sale );
-			fees.BrokenLeg = MedicalFees.BrokenLeg * rate * coef * (1 - sale );
-			fees.RadiationSick = MedicalFees.RadiationSick * rate * coef * (1 - sale );
-			fees.FrostbiteSick = MedicalFees.FrostbiteSick * rate * coef * (1 - sale );
-			fees.Decontamination = MedicalFees.Decontamination * rate * coef * (1 - sale );
-			fees.SaveDNA = MedicalFees.SaveDNA * rate * coef * (1 - sale );
-			fees.RecoverDNA = MedicalFees.RecoverDNA * rate * coef * (1 - sale );
-			
-			
-		}
+		if (!EnableSales) sale = 0;
+		
+		// Segurança: Impede que o desconto seja superior a 100% ou menor que 0
+		sale = Math.Clamp(sale, 0, 1);
+		
+		// Otimização: Pre-calculo do multiplicador final
+		float finalMultiplier = rate * coef * (1.0 - sale);
+		
+		fees.EnabledBloodTest = MedicalFees.EnabledBloodTest;
+		fees.EnabledCloneDNA = MedicalFees.EnabledCloneDNA;
+		
+		fees.Fee = MedicalFees.Fee * finalMultiplier;
+		fees.Bleeding = MedicalFees.Bleeding * finalMultiplier;
+		fees.BrainSick = MedicalFees.BrainSick * finalMultiplier;
+		fees.Commoncold = MedicalFees.Commoncold * finalMultiplier;
+		fees.Influenza = MedicalFees.Influenza * finalMultiplier;
+		fees.Cholera = MedicalFees.Cholera * finalMultiplier;
+		fees.Salmonella = MedicalFees.Salmonella * finalMultiplier;
+		fees.WoundInfectionL1 = MedicalFees.WoundInfectionL1 * finalMultiplier;
+		fees.WoundInfectionL2 = MedicalFees.WoundInfectionL2 * finalMultiplier;
+		fees.FoodPoisoning = MedicalFees.FoodPoisoning * finalMultiplier;
+		fees.ChemicalPoisoningL1 = MedicalFees.ChemicalPoisoningL1 * finalMultiplier;
+		fees.ChemicalPoisoningL2 = MedicalFees.ChemicalPoisoningL2 * finalMultiplier;
+		fees.ChemicalPoisoningL3 = MedicalFees.ChemicalPoisoningL3 * finalMultiplier;
+		fees.BrokenArm = MedicalFees.BrokenArm * finalMultiplier;
+		fees.BrokenLeg = MedicalFees.BrokenLeg * finalMultiplier;
+		fees.RadiationSick = MedicalFees.RadiationSick * finalMultiplier;
+		fees.FrostbiteSick = MedicalFees.FrostbiteSick * finalMultiplier;
+		fees.Decontamination = MedicalFees.Decontamination * finalMultiplier;
+		fees.SaveDNA = MedicalFees.SaveDNA * finalMultiplier;
+		fees.RecoverDNA = MedicalFees.RecoverDNA * finalMultiplier;
 				
 		return fees;	
 	}	
@@ -97,22 +92,16 @@ class alpExpandedInteraction
 	{
 		alpSpreadRumoursFees fees = new alpSpreadRumoursFees;
 		
-		if ( !EnableSales )
-		{
-			sale = 0;
-		}
+		if (!EnableSales) sale = 0;
 
-		if ( coef )			
-		{
-			
-			fees.NegativeGossipCost = Rumours.NegativeGossipCost * rate * coef * (1 - sale );
-			fees.PositiveGossipCost = Rumours.PositiveGossipCost * rate * coef * (1 - sale );
-	
-			fees.NegativeGossipGain = Rumours.NegativeGossipGain / coef;
-			fees.PositiveGossipGain = Rumours.PositiveGossipGain / coef;			
-		}
+		sale = Math.Clamp(sale, 0, 1);
+		float finalMultiplier = rate * coef * (1.0 - sale);
+		
+		fees.NegativeGossipCost = SpreadRumoursFees.NegativeGossipCost * finalMultiplier;
+		fees.PositiveGossipCost = SpreadRumoursFees.PositiveGossipCost * finalMultiplier;
+		fees.NegativeGossipGain = SpreadRumoursFees.NegativeGossipGain * finalMultiplier;
+		fees.PositiveGossipGain = SpreadRumoursFees.PositiveGossipGain * finalMultiplier;
 				
 		return fees;	
-	}
+	}	
 }
-

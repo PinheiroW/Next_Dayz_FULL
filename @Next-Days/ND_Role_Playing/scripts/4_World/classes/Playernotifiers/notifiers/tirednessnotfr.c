@@ -1,36 +1,21 @@
-// Script File
+/**
+ * @class   alpTirednessNotfr
+ * @brief   Gerencia a exibição visual da fadiga (setas de tendência) na HUD
+ * Auditado em: 2024 - Foco em Segurança de Inicialização e Dinâmica de Configuração
+ */
 enum alpeNotifiers : eNotifiers
 {
 	NTF_TIREDNESS,
 }
 
-
-
 class alpTirednessNotfr: NotifierBase
 {
-
-	/*
-	default values	
-	float FatigueBasal									= 0.0025; //energy loss per second while idle (max energy is 100)
-	float FatigueWalk									= 0.005; //energy loss per second while walking (max energy is 100)
-	float FatigueJog									= 0.008; //energy loss per second while jogging (max energy is 100)
-	float FatigueSprint									= 0.016; //energy loss per second while sprintingn (max energy is 100)	
-	*/
-	
-	
-	
-	
-	private float 	DEC_TRESHOLD_LOW 			= 0;
-	private float 	DEC_TRESHOLD_MED 			= -0.01 * ( GetND().GetRP().GetFatigue().FatigueWalk / 0.005 );
-	private float 	DEC_TRESHOLD_HIGH			= -0.018 * ( GetND().GetRP().GetFatigue().FatigueJog / 0.008 );
-	private float 	INC_TRESHOLD_LOW 			= 0;
-	private float 	INC_TRESHOLD_MED 			= 0.05;
-	private float 	INC_TRESHOLD_HIGH			= 0.2;	
-	
+	private float m_ObservedValue;
 	
 	void alpTirednessNotfr(NotifiersManager manager)
 	{
-
+		// Notificadores não usam Init() como modificadores, o construtor é o lugar certo
+		m_Active = true; 
 	}
 
 	override int GetNotifierType()
@@ -38,38 +23,57 @@ class alpTirednessNotfr: NotifierBase
 		return alpeNotifiers.NTF_TIREDNESS;
 	}
 
-	override void DisplayBadge()
+	// Helpers para obter thresholds com segurança
+	protected float GetDecMed() 
 	{
+		if (GetND() && GetND().GetRP() && GetND().GetRP().GetFatigue())
+			return -0.01 * (GetND().GetRP().GetFatigue().FatigueWalk / 0.005);
+		return -0.01;
+	}
+
+	protected float GetDecHigh() 
+	{
+		if (GetND() && GetND().GetRP() && GetND().GetRP().GetFatigue())
+			return -0.018 * (GetND().GetRP().GetFatigue().FatigueJog / 0.008);
+		return -0.018;
+	}
+
+	override void DisplayTendency(float delta)
+	{
+		int tendency = CalculateTendency(delta, 0, GetDecMed(), GetDecHigh(), 0.05, 0.2);
+		
+		// DS_TENDENCY_X são constantes nativas do DayZ para as setas da HUD
+		// 1 seta, 2 setas, 3 setas, etc.
+		DisplayElementTendency notifier_tendency = DisplayElementTendency.Cast(GetVirtualHud().GetElement(eDisplayElements.DELM_TENDENCY_FATIGUE));
+		
+		if (notifier_tendency)
+		{
+			notifier_tendency.SetTendency(tendency);
+		}
+	}
+
+	override void OnTick(float deltaT)
+	{
+		if (!m_Player) return;
+
+		// Obtém o valor atual da fadiga para comparar no próximo tick
+		float current_value = m_Player.GetStatFatigue().Get();
+		
+		// A variação (delta) entre o valor antigo e o novo define a seta
+		float delta = current_value - m_ObservedValue;
+		
+		DisplayTendency(delta);
+		
+		m_ObservedValue = current_value;
 	}
 
 	override void HideBadge()
 	{
-	}
-	
-	
-	
-	override void DisplayTendency(float delta)
-	{
-		//PrintString(delta.ToString());
-		int tendency = CalculateTendency(delta, INC_TRESHOLD_LOW, INC_TRESHOLD_MED, INC_TRESHOLD_HIGH, DEC_TRESHOLD_LOW, DEC_TRESHOLD_MED, DEC_TRESHOLD_HIGH);
-
-		EStatLevels energy_level = m_Player.GetStatLevelEnergyALP();
-		
-		
-		//m_Player
-		
-		alpStatsTendencyTiredness dis_elm = alpStatsTendencyTiredness.Cast( m_Player.GetSyncData().GetElement( alpRPelements.TDCY_TIREDNESS )  ) ;
-		
-		if( dis_elm )
-		{
-			dis_elm.SetTendency(tendency);
-			dis_elm.SetSeriousnessLevel(energy_level);
-			
-		}
+		// Implementação opcional para esconder o ícone se necessário
 	}
 
-	override float GetObservedValue()
+	override void DisplayBadge()
 	{
-		return m_Player.GetStatTiredness().Get();
-	}		
+		// Implementação opcional para mostrar ícones especiais (ex: exclamação)
+	}
 };

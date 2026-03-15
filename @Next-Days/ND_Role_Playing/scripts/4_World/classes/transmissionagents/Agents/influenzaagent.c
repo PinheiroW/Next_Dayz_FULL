@@ -1,37 +1,44 @@
+/**
+ * @class   InfluenzaAgent
+ * @brief   Gerencia a infecção por gripe com suporte ao sistema de imunidade Next Days
+ * Auditado em: 2024 - Foco em Consistência de Imunidade Adquirida
+ */
 modded class InfluenzaAgent extends AgentBase
 {
-	/*
-	const float INFLUENZA_AGENT_AUTOINFECT_THRESHOLD_HC = PlayerConstants.THRESHOLD_HEAT_COMFORT_MINUS_WARNING;
-
-	override void Init()
-	{
-		m_Type 					= eAgents.INFLUENZA;
-		m_Invasibility 			= 0.33;
-		m_TransferabilityIn		= 1;
-		m_TransferabilityOut	= 1;
-		m_MaxCount 				= 1000;
-		m_Digestibility			= 0.1;
-		m_AntibioticsResistance = 0;
-		m_AutoinfectProbability = CalculateAutoinfectProbability( 0.65 );
-		m_TransferabilityAirOut = 1;
-		m_Potency 				= EStatLevels.MEDIUM;
-		m_DieOffSpeed 			= 0.66;
-	}
-	*/
-	
-	
+	/**
+	 * @brief Verifica se o jogador pode contrair a doença automaticamente (ex: frio)
+	 */
 	override bool CanAutoinfectPlayer(PlayerBase player)
 	{
+		if (!player) return false;
+
+		float heat_comfort = player.GetStatHeatComfort().Get();
 		
+		// 1. Verifica se o jogador está com frio
+		bool isFreezing = (heat_comfort < PlayerConstants.THRESHOLD_HEAT_COMFORT_MINUS_WARNING);
 		
-		if ( player.GetStatHeatComfort().Get() < INFLUENZA_AGENT_AUTOINFECT_THRESHOLD_HC && !player.GetModifiersManager().IsModifierActive( rModifiers.MDF_IMMUNITY_INFLUENZA ) )
+		// 2. Verifica se o jogador possui o modificador de imunidade ativa (vacina/anticorpos)
+		bool isImmune = false;
+		if (player.GetModifiersManager())
 		{
-			return true;			
+			isImmune = player.GetModifiersManager().IsModifierActive(rModifiers.MDF_IMMUNITY_INFLUENZA);
 		}
-		else
-		{
-			return false;	
-		}
+
+		// Só infecta se estiver com frio E NÃO for imune
+		return (isFreezing && !isImmune);
 	}
 
+	/**
+	 * @brief Extensão para garantir que a imunidade também bloqueie contágio via ar/contato
+	 */
+	override void Transfer(PlayerBase src, PlayerBase target)
+	{
+		// Se o alvo for imune pelo sistema Next Days, cancelamos a transferência
+		if (target && target.GetModifiersManager() && target.GetModifiersManager().IsModifierActive(rModifiers.MDF_IMMUNITY_INFLUENZA))
+		{
+			return;
+		}
+
+		super.Transfer(src, target);
+	}
 }

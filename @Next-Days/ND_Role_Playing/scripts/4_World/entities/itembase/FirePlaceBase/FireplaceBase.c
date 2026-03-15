@@ -1,150 +1,95 @@
+/**
+ * @class   FireplaceBase
+ * @brief   Integração de Dinheiro e Banha como materiais de combustão no Next Days
+ * Auditado em: 2026 - Foco em Performance e Lógica de Combustão
+ */
 modded class FireplaceBase extends ItemBase
 {
-	
-	typename ATTACHMENT_LARD_A_ALP			= Lard;
-
+	protected static int m_LardSlotId = -1;
 	
 	override void EEInit()
 	{
 		super.EEInit();
 
+		// 1. Otimização de busca de Slot
+		if (m_LardSlotId == -1)
+			m_LardSlotId = InventorySlots.GetSlotIdFromString("LardALP");
+
+		// 2. Registro de Dinheiro como Acendedor (Kindling)
+		// Verificação de nulidade para evitar erros em lareiras internas (Indoor)
 		if ( m_FireConsumableTypes )
 		{
-			m_FireConsumableTypes.Insert( alp_Money10, 		new FireConsumableType( alp_Money10, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_Money20, 		new FireConsumableType( alp_Money20, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_Money50, 		new FireConsumableType( alp_Money50, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_Money100, 		new FireConsumableType( alp_Money100, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_Money500, 		new FireConsumableType( alp_Money500, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_Money1000, 		new FireConsumableType( alp_Money1000, 		5, 	true,	"Paper" ) );	
-			
-			m_FireConsumableTypes.Insert( alp_USD1, 		new FireConsumableType( alp_USD1, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_USD5, 		new FireConsumableType( alp_USD5, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_USD10, 		new FireConsumableType( alp_USD10, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_USD20, 		new FireConsumableType( alp_USD20, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_USD50, 		new FireConsumableType( alp_USD50, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_USD100, 		new FireConsumableType( alp_USD100, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_USD500, 		new FireConsumableType( alp_USD500, 		5, 	true,	"Paper" ) );	
-			m_FireConsumableTypes.Insert( alp_USD1000, 		new FireConsumableType( alp_USD1000, 		5, 	true,	"Paper" ) );	
-		
-			m_FireConsumableTypes.Insert( ATTACHMENT_LARD_A_ALP, 		new FireConsumableType( ATTACHMENT_LARD_A_ALP, 		1, 	false,	"LardALP" ) );	
+			RegisterMoneyAsKindling(alp_Money10);
+			RegisterMoneyAsKindling(alp_Money20);
+			RegisterMoneyAsKindling(alp_Money50);
+			RegisterMoneyAsKindling(alp_Money100);
+			RegisterMoneyAsKindling(alp_Money500);
+			RegisterMoneyAsKindling(alp_Money1000);
 		}
-
-	}	
-	
-	override void RefreshFireplaceVisuals()
-	{	
-		super.RefreshFireplaceVisuals();
-		
-		if ( IsHologram() )
-		{
-			return;
-		}		
-		
-		if ( IsItemTypeAttached( ATTACHMENT_LARD_A_ALP )  )
-		{
-			SetAnimationPhase( ANIMATION_ASHES, 0 );
-		}		
-		
-		
 	}
-	
-	
-	override protected bool IsFuel( ItemBase item )
-	{
-		bool isfuel = super.IsFuel(item);
-		
-		if (isfuel){
-			if ( item.GetType() == "Lard" && item != FindAttachmentBySlotName("LardALP") ) {
-				return false;
-			}
-			return true;
-		} 
-		return false;
 
-	}
-	
-	
-	
-	
-	override protected int GetFuelCount()
+	// Função auxiliar para evitar repetição de código
+	protected void RegisterMoneyAsKindling(typename moneyType)
 	{
-		int attachments_count = GetInventory().AttachmentCount();
-		int fire_consumables_count = m_FireConsumables.Count();
-		int fuel_count = 0;
-		
-		for ( int i = 0; i < attachments_count; i++ )
+		if (!m_FireConsumableTypes.Contains(moneyType))
 		{
-			ItemBase item = ItemBase.Cast( GetInventory().GetAttachmentFromIndex( i ) );
-			
-			if ( item.GetType() == "Lard" && item != FindAttachmentBySlotName("LardALP") )
-				continue;
-			
-			for ( int j = 0; j < fire_consumables_count; j++ )
-			{
-				ref FireConsumableType fire_consumable_type = m_FireConsumableTypes.Get( item.Type() );
+			m_FireConsumableTypes.Insert(moneyType, new FireConsumableType(moneyType, 5, true, "Paper"));
+		}
+	}
 
-				if ( fire_consumable_type && !fire_consumable_type.IsKindling() )
-				{
-					fuel_count++;
-					break;
-				}
-			}
+	override void CalculateCookingConditions()
+	{
+		super.CalculateCookingConditions();
+		
+		// 3. Integração da Banha na Temperatura
+		// Se houver banha, o fogo queima mais quente e demora mais para perder calor
+		if ( FindAttachmentBySlotName("LardALP") )
+		{
+			m_TemperatureMax = 1000; // Banha aumenta a temperatura máxima (Gordura queima forte)
+			m_TemperatureLossThreshold = 0.5; 
+		}
+	}
+
+	override int GetFuelCount()
+	{
+		int fuel_count = super.GetFuelCount();
+		
+		// 4. Correção Crítica: Se houver banha, ela deve contar como combustível
+		// Isso impede que o fogo apague se houver apenas banha no slot customizado
+		if ( FindAttachmentBySlotName("LardALP") )
+		{
+			fuel_count++;
 		}
 		
 		return fuel_count;
-	}	
-	
+	}
 
-	
-	override bool CanReleaseAttachment( EntityAI attachment )
+	override bool CanReleaseAttachment(EntityAI attachment)
 	{
-		if( !super.CanReleaseAttachment( attachment ) )
+		if (!super.CanReleaseAttachment(attachment))
 			return false;
-				
-		if ( IsBurning() && attachment == FindAttachmentBySlotName("LardALP") )
+		
+		// Impede retirar a banha enquanto o fogo estiver aceso (Realismo: está derretendo/quente)
+		if ( IsBurning() && attachment.GetInventory().GetSlotId(0) == m_LardSlotId )
 		{
 			return false;
 		}
-		else
-		{
-			return true;
-		}
-	}	
-	
-	
-	override bool CanReceiveAttachment( EntityAI attachment, int slotId )
-	{
-		bool can = super.CanReceiveAttachment(attachment, slotId);		
-		if ( !can ){
-			return false;
-		}		
-		if ( can && IsBurning() ) {			
-			if ( slotId == InventorySlots.GetSlotIdFromString("LardALP") && FindAttachmentBySlotName("LardALP") ) {
-				return false;			
-			}			
-		}
+		
 		return true;
+	}
 
-		
-	}		
-}
-
-modded class Fireplace extends FireplaceBase
-{
-	override bool CanReceiveAttachment( EntityAI attachment, int slotId )
+	override bool CanReceiveAttachment(EntityAI attachment, int slotId)
 	{
-		bool can = super.CanReceiveAttachment(attachment, slotId);		
-		if ( can ) {
-			return true;
-		}
-		
-		if (attachment.GetType() == "Lard" && slotId == InventorySlots.GetSlotIdFromString("LardALP") ) {			
-			if ( !IsBurning() || !FindAttachmentBySlotName("LardALP") ) {
-				return true;
-			}		
-		}
-		return false;
+		if (!super.CanReceiveAttachment(attachment, slotId))
+			return false;
 
+		// Impede colocar mais banha se já estiver queimando uma (Evita sobreposição visual)
+		if ( IsBurning() && slotId == m_LardSlotId ) 
+		{
+			if ( FindAttachmentBySlotName("LardALP") )
+				return false;
+		}
 		
-	}		
-}
+		return true;
+	}
+};

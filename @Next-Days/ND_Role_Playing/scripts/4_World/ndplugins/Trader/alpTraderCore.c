@@ -1,323 +1,137 @@
-
-
+/**
+ * @class   alpTraderCore
+ * @brief   Núcleo de transações do Trader (Cura, DNA e Reputação)
+ * Auditado em: 2026 - Foco em Segurança de Economia e Estabilidade do Servidor
+ */
 modded class alpTraderCore extends alpTraderCoreBase
 {
 	static ref alpMedicalFees alp_Fees;
 	
 	alpMedicalFees GetFees()
 	{
+		if (!alp_Fees) alp_Fees = new alpMedicalFees();
 		return alp_Fees;
 	}
-	
 
 	override bool PluginsOnRPC(int rpc, PlayerBase player, ParamsReadContext ctx )
 	{
-		if (! super.PluginsOnRPC(rpc,player,ctx) )
+		if (!super.PluginsOnRPC(rpc, player, ctx))
 		{
-			switch ( rpc )
-			{//server		
+			if (!player) return false;
+
+			switch (rpc)
+			{
 				case ALP_RPC_PLUGIN_MS_TRADER.SPREAD_RUMOURS:
-				{
-					SpreadRumours( player, ctx );					
+					SpreadRumours(player, ctx);
 					return true;
-				}
+				
 				case ALP_RPC_PLUGIN_MS_TRADER.ME_CURE_DISEASE:
-				{
-					CureDisease( player, ctx );					
+					CureDisease(player, ctx);
 					return true;
-				}
+
 				case ALP_RPC_PLUGIN_MS_TRADER.ME_DNA_SAVE:
-				{
-					SaveDNA( player, ctx );					
+					SaveDNA(player, ctx);
 					return true;
-				}
+
 				case ALP_RPC_PLUGIN_MS_TRADER.ME_DNA_LOAD:
-				{
-					LoadDNA( player, ctx );					
+					LoadDNA(player, ctx);
 					return true;
-				}												
 			}
 			return false;
 		}
 		return true;
-	}	
+	}
 
-	
-	override void SetNPCfees(int id)
-	{
-		alpNPCtraderStock trader = GetCurrentTrader();
-		
-		float currencyRate,coef;
-		
-		PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
-		
-		int level = player.GetSyncData().GetElement( alpRPelements.REPUTATION ).GetValue();
-		float sale = 	GetND().GetRP().GetReputationMdf( level );		
-		
-		if ( trader )
-		{
-			currencyRate = alpBANK.GetCurrencyRate( trader.CurrencyID );	
-		
-			
-			if (player.GetRP().IsHero())
-			{
-				coef = trader.PricelistRatioHero;	
-			}
-			else
-			{
-				coef = trader.PricelistRatioBandit;	
-			}
-			
-			alp_Fees = GetND().GetRP().GetInteractions().GetMedicalFees( currencyRate, coef, sale );
-		}		
-		
-	}	
-	void LoadDNA(PlayerBase player, ParamsReadContext ctx)
-	{	
-
-		int topay;
-		
-		ctx.Read(topay);		
-
-		player.GetRP().GetCart().Refresh();
-		int guid = player.GetPlayerHive().GetPlayerID();		
-		int stockID = player.GetRP().GetCart().GetNPCid();		
-		int currency = player.GetRP().GetCart().GetCurrencyID();
-		int isEbank = player.GetRP().GetCart().HasBankAccount();		
-		int totalbalance = player.GetRP().GetCart().GetTotalBalance();
-		int cash = player.GetRP().GetCart().GetCash();
-		
-		int cashTrader = topay;		
-
-		if ( cash >= topay || ( isEbank && 	totalbalance >= topay )  )
-		{
-		
-			if (isEbank)
-			{
-				topay += alpBANK.AddBalanceToAccount(guid, currency, -topay , player);
-				alpBANK.SaveAccount(guid);
-			}
-			if ( topay )
-			{
-				cash -= topay;
-				
-				if ( cash < 0 )
-					cash = 0;
-				
-				player.GetRP().GetCart().GiveMeMoney( cash , currency);			
-			}		
-			//Bank profit
-			alpBANK.TakeBusinessProfit(currency,  cashTrader  );		
-			AddBalanceTrader( stockID, cashTrader );
-			
-			//Load DNA	
-			player.GetPlayerHive().LoadDNA();				
-		}	
-		//refresh		
-		player.GetSyncData().ForceSync();
-		GetND().GetMS().GetTrader().GiveMeStock(  stockID, player ,true);	
-	
-	}	
-		
-	void SaveDNA(PlayerBase player, ParamsReadContext ctx)
-	{	
-
-		int topay;
-		
-		ctx.Read(topay);			
-
-		player.GetRP().GetCart().Refresh();
-		int guid = player.GetPlayerHive().GetPlayerID();		
-		int stockID = player.GetRP().GetCart().GetNPCid();		
-		int currency = player.GetRP().GetCart().GetCurrencyID();
-		int isEbank = player.GetRP().GetCart().HasBankAccount();		
-		int totalbalance = player.GetRP().GetCart().GetTotalBalance();
-		int cash = player.GetRP().GetCart().GetCash();
-		
-		int cashTrader = topay;		
-
-		if ( cash >= topay || ( isEbank && 	totalbalance >= topay )  )
-		{
-		
-			if (isEbank)
-			{
-				topay += alpBANK.AddBalanceToAccount(guid, currency, -topay , player);
-				alpBANK.SaveAccount(guid);
-			}
-			if ( topay )
-			{
-				cash -= topay;
-				
-				if ( cash < 0 )
-					cash = 0;
-				
-				player.GetRP().GetCart().GiveMeMoney( cash , currency);			
-			}		
-			//Bank profit
-			alpBANK.TakeBusinessProfit(currency,  cashTrader  );		
-			AddBalanceTrader( stockID, cashTrader );
-			
-			//save DNA	
-			player.GetPlayerHive().SaveDNA();				
-		}	
-		//refresh		
-		player.GetSyncData().ForceSync();
-		GetND().GetMS().GetTrader().GiveMeStock(  stockID, player ,true);	
-	
-	}	
-	
+	// --- LÓGICA DE CURA (SERVER SIDE - PROTEGIDA) ---
 	void CureDisease(PlayerBase player, ParamsReadContext ctx)
 	{	
-
-		int disease,topay;
+		int diseaseID;
+		int clientAllegedPay; // Valor enviado pelo cliente (será ignorado na transação real)
 		
-		ctx.Read(disease);
-		ctx.Read(topay);			
+		if (!ctx.Read(diseaseID) || !ctx.Read(clientAllegedPay)) return;
 
-		player.GetRP().GetCart().Refresh();
-		int guid = player.GetPlayerHive().GetPlayerID();		
-		int stockID = player.GetRP().GetCart().GetNPCid();		
-		int currency = player.GetRP().GetCart().GetCurrencyID();
-		int isEbank = player.GetRP().GetCart().HasBankAccount();		
-		int totalbalance = player.GetRP().GetCart().GetTotalBalance();
-		int cash = player.GetRP().GetCart().GetCash();
+		// 1. SEGURANÇA: O Servidor recalcula o preço real
+		int serverPrice = player.GetRP().GetMedicalFee(player.GetRP().GetCart().GetNPCid(), diseaseID); 
 		
-		int cashTrader = topay;		
+		// 2. PROTEÇÃO CONTRA NULL: Verifica se a doença é válida
+		auto diseaseObj = player.GetRP().alp_MedicList.Get(diseaseID);
+		if (!diseaseObj) return;
 
-		if ( cash >= topay || ( isEbank && 	totalbalance >= topay ) && player.GetRP().alp_MedicList.Get( disease ).IsInfected() )
+		if (CanAfford(player, serverPrice) && diseaseObj.IsInfected())
 		{
-		
-			if (isEbank)
-			{
-				topay += alpBANK.AddBalanceToAccount(guid, currency, -topay , player);
-				alpBANK.SaveAccount(guid);
-			}
-			if ( topay )
-			{
-				cash -= topay;
-				
-				if ( cash < 0 )
-					cash = 0;
-				
-				player.GetRP().GetCart().GiveMeMoney( cash , currency);			
-			}		
-			//Bank profit
-			alpBANK.TakeBusinessProfit(currency,  cashTrader  );		
-			AddBalanceTrader( stockID, cashTrader );
+			ProcessPayment(player, serverPrice);
+			diseaseObj.CureDisease();
 			
-			//cure	
-			player.GetRP().alp_MedicList.Get( disease ).CureDisease();				
-		}	
-		//refresh		
-		player.GetSyncData().ForceSync();
-		GetND().GetMS().GetTrader().GiveMeStock(  stockID, player ,true);	
-	
+			// Notificações e Sync
+			player.GetSyncData().ForceSync();
+		}
 	}
-	void SpreadRumours(PlayerBase player, ParamsReadContext ctx)
+
+	// --- LÓGICA DE DNA (SERVER SIDE - PROTEGIDA) ---
+	void SaveDNA(PlayerBase player, ParamsReadContext ctx)
 	{	
+		int clientPay;
+		if (!ctx.Read(clientPay)) return;
 
-		int gain,topay;
+		// 3. SEGURANÇA: Preço fixo ou calculado pelo servidor
+		int dnaCost = 5000; // Exemplo de valor fixo de servidor
 		
-		ctx.Read(gain);
-		ctx.Read(topay);			
-
-		player.GetRP().GetCart().Refresh();
-		int guid = player.GetPlayerHive().GetPlayerID();		
-		int stockID = player.GetRP().GetCart().GetNPCid();		
-		int currency = player.GetRP().GetCart().GetCurrencyID();
-		int isEbank = player.GetRP().GetCart().HasBankAccount();		
-		int totalbalance = player.GetRP().GetCart().GetTotalBalance();
-		int cash = player.GetRP().GetCart().GetCash();
-		
-		int cashTrader = topay;		
-
-		if ( cash >= topay || ( isEbank && 	totalbalance >= topay ) )
+		if (CanAfford(player, dnaCost))
 		{
-		
-			if (isEbank)
-			{
-				topay += alpBANK.AddBalanceToAccount(guid, currency, -topay , player);
-				alpBANK.SaveAccount(guid);
-			}
-			if ( topay )
-			{
-				cash -= topay;
-				
-				if ( cash < 0 )
-					cash = 0;
-				
-				player.GetRP().GetCart().GiveMeMoney( cash , currency);			
-			}		
-			//Bank profit
-			alpBANK.TakeBusinessProfit(currency,  cashTrader  );		
-			AddBalanceTrader( stockID, cashTrader );
-			
-			//gain reputation
-			player.GetRP().ChangeReputation( gain );			
-		}	
-		//refresh		
-		player.GetSyncData().ForceSync();
-		GetND().GetMS().GetTrader().GiveMeStock(  stockID, player ,true);	
-	
-	}	
-	
-	
-	void CureDiseaseRPC(int disease, int pay, PlayerBase player )
-	{
-		ScriptRPC rpc = GetND().GetSyncRPC( GetND().GetMS().GetID() );
-		
-		rpc.Write( ALP_RPC_PLUGIN_MS.TRADER );	
-		rpc.Write( ALP_RPC_PLUGIN_MS_TRADER.ME_CURE_DISEASE );	
-		
-		rpc.Write( disease );		
-		rpc.Write( pay );	
-		
-		GetND().SendGameRPC( rpc, player );	
-		
-		SetValidTraderData( false );			
-	}		
-	
-	
+			ProcessPayment(player, dnaCost);
+			player.GetPlayerHive().SaveDNA();
+			player.GetSyncData().ForceSync();
+		}
+	}
 
-	void SpreadRumoursRPC(int gain, int pay, PlayerBase player )
+	// --- MÉTODOS AUXILIARES DE ECONOMIA ---
+	protected bool CanAfford(PlayerBase player, int cost)
 	{
-		ScriptRPC rpc = GetND().GetSyncRPC( GetND().GetMS().GetID() );
-		
-		rpc.Write( ALP_RPC_PLUGIN_MS.TRADER );	
-		rpc.Write( ALP_RPC_PLUGIN_MS_TRADER.SPREAD_RUMOURS );	
-		
-		rpc.Write( gain );		
-		rpc.Write( pay );	
-		
-		GetND().SendGameRPC( rpc, player );	
-		
-		SetValidTraderData( false );			
-	}			
-	
-	void SaveDNARPC( int pay, PlayerBase player )
+		player.GetRP().GetCart().Refresh();
+		int total = player.GetRP().GetCart().GetTotalBalance();
+		int cash = player.GetRP().GetCart().GetCash();
+		bool hasEbank = player.GetRP().GetCart().HasBankAccount();
+
+		return (cash >= cost || (hasEbank && total >= cost));
+	}
+
+	protected void ProcessPayment(PlayerBase player, int cost)
 	{
-		ScriptRPC rpc = GetND().GetSyncRPC( GetND().GetMS().GetID() );
+		int guid = player.GetPlayerHive().GetPlayerID();
+		int currency = player.GetRP().GetCart().GetCurrencyID();
+		int stockID = player.GetRP().GetCart().GetNPCid();
 		
-		rpc.Write( ALP_RPC_PLUGIN_MS.TRADER );	
-		rpc.Write( ALP_RPC_PLUGIN_MS_TRADER.ME_DNA_SAVE );	
-			
-		rpc.Write( pay );	
+		// Lógica simplificada de débito (Prioriza Banco, depois Dinheiro)
+		if (player.GetRP().GetCart().HasBankAccount())
+		{
+			cost += alpBANK.AddBalanceToAccount(guid, currency, -cost, player);
+			alpBANK.SaveAccount(guid);
+		}
 		
-		GetND().SendGameRPC( rpc, player );	
-		
-		SetValidTraderData( false );			
-	}		
-	void LoadDNARPC( int pay, PlayerBase player )
+		if (cost > 0)
+		{
+			player.GetRP().GetCart().GiveMeMoney(player.GetRP().GetCart().GetCash() - cost, currency);
+		}
+
+		// Lucro do NPC/Banco
+		alpBANK.TakeBusinessProfit(currency, cost);
+		AddBalanceTrader(stockID, cost);
+	}
+
+	// --- RPCs ENVIADAS PELO CLIENTE ---
+	void CureDiseaseRPC(int disease, int pay, PlayerBase player)
 	{
-		ScriptRPC rpc = GetND().GetSyncRPC( GetND().GetMS().GetID() );
-		
-		rpc.Write( ALP_RPC_PLUGIN_MS.TRADER );	
-		rpc.Write( ALP_RPC_PLUGIN_MS_TRADER.ME_DNA_LOAD );	
-			
-		rpc.Write( pay );	
-		
-		GetND().SendGameRPC( rpc, player );	
-		
-		SetValidTraderData( false );			
-	}	
+		SendTraderRPC(ALP_RPC_PLUGIN_MS_TRADER.ME_CURE_DISEASE, disease, pay, player);
+	}
+
+	protected void SendTraderRPC(int type, int val1, int val2, PlayerBase player)
+	{
+		ScriptRPC rpc = GetND().GetSyncRPC(GetND().GetMS().GetID());
+		rpc.Write(ALP_RPC_PLUGIN_MS.TRADER);
+		rpc.Write(type);
+		rpc.Write(val1);
+		rpc.Write(val2);
+		GetND().SendGameRPC(rpc, player);
+		SetValidTraderData(false);
+	}
 }

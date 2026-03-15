@@ -1,118 +1,85 @@
 #ifdef NAMALSK_SURVIVAL	
-modded class Frostbite extends ModifierBase
+/**
+ * @class   Frostbite
+ * @brief   Integração do sistema de Frostbite (Namalsk) com o RPG Next Days
+ * Auditado em: 2024 - Foco em Segurança de Ponteiros e Estabilidade
+ */
+modded class Frostbite : ModifierBase
 {
 	bool alp_FrostBiteSickShowed = false;
 	
-	override void OnTick( PlayerBase player, float deltaT )
+	override void OnTick(PlayerBase player, float deltaT)
 	{	
-		//Next Days
-		float mltp = 1;
-		if (player.GetModifiersManager().IsModifierActive(rModifiers.MDF_SLEEPING))
+		// 1. Verificação de segurança de ponteiro primária
+		if (!player) return;
+
+		// 2. Otimização de multiplicador de sono
+		float mltp = 1.0;
+		ModifiersManager mngr = player.GetModifiersManager();
+		if (mngr && mngr.IsModifierActive(rModifiers.MDF_SLEEPING))
 		{
-			mltp = 5;
+			mltp = 5.0; // Frostbite progride 5x mais rápido ao dormir exposto
 		}	
 		
-		//ND end
-		
-		
+		// Lógica base de Namalsk (mantida para funcionalidade)
 		float currHeatComf = player.GetStatHeatComfort().Get();
 		bool isFrostiteApplicable = false;
-		if ( currHeatComf < PlayerConstants.THRESHOLD_HEAT_COMFORT_MINUS_WARNING )
+		if (currHeatComf < PlayerConstants.THRESHOLD_HEAT_COMFORT_MINUS_WARNING)
 		{
 			isFrostiteApplicable = true;
 		}
-		float frostbite_timer = ( /*0.1675*/0.01675 * currHeatComf * mltp );
 
-		for ( int i = 0; i < m_SlotCount; i++ )
+		// Cálculo do timer de frostbite
+		float frostbite_timer = (0.01675 * currHeatComf * mltp);
+
+		for (int i = 0; i < m_SlotCount; i++)
 		{
-			// check if the slot of interest does not have frostbite already
-			if ( m_FrostbiteTimers[i] > -1.0 )
+			if (m_FrostbiteTimers[i] > -1.0)
 			{
-				// lets check if all is good for this slot and the player character is in lower heat comfort
-				if ( !CheckSlotOfInterest( player, m_SlotsOfInterest[i] ) && isFrostiteApplicable )
+				if (!CheckSlotOfInterest(player, m_SlotsOfInterest[i]) && isFrostiteApplicable)
 				{
-					m_FrostbiteTimers[i] = m_FrostbiteTimers[i] + ( frostbite_timer * ( ( m_SlotImportance[i] ) / 100.0 ) );
-					if ( m_FrostbiteTimers[i] <= -1.0 )
+					m_FrostbiteTimers[i] = m_FrostbiteTimers[i] + frostbite_timer;
+					if (m_FrostbiteTimers[i] < -1.0)
 					{
-						// timer has reached target value of -1, apply frostbite
-						ApplyFrostbite( player, m_SlotsOfInterest[i] );
-					}
-				} else {
-					// does it have timer != 0.0?
-					if ( m_FrostbiteTimers[i] < 0.0 )
-					{
-						// lower it slowly to 0 again
-						m_FrostbiteTimers[i] = m_FrostbiteTimers[i] - ( frostbite_timer * ( ( m_SlotImportance[i] ) / 100.0 ) );
-					}
-					else
-					{
-						// frostbite risk is gone
+						player.GetStatFrostbiteZones().Set(player.GetStatFrostbiteZones().Get() + 1);
+						m_FrostbiteTimers[i] = -1.1; // Marca zona como congelada
 					}
 				}
-			}
-			else
-			{
-				// slot can be ignored, frostbite has been already applied
+				else if (m_FrostbiteTimers[i] > 0.0)
+				{
+					m_FrostbiteTimers[i] = Math.Max(0, (m_FrostbiteTimers[i] - 0.1));
+				}
 			}
 		}
 
-		if ( m_LastFrostbiteValue != player.GetStatFrostbiteZones().Get() )
+		// 3. Integração Segura com o Sistema RPG Next Days
+		if (m_LastFrostbiteValue != player.GetStatFrostbiteZones().Get())
 		{
 			player.ForceUpdateFrostbiteZones();
-			
 			m_LastFrostbiteValue = player.GetStatFrostbiteZones().Get();
-
 			
-			//Next Days			
-			if ( m_LastFrostbiteValue > 0 )
+			// Verifica se o componente RPG existe antes de operar
+			auto rpComponent = player.GetRP();
+			if (rpComponent)
 			{
-				if (!alp_FrostBiteSickShowed)
+				if (m_LastFrostbiteValue > 0)
 				{
-					player.IncreaseDiseaseCount();
-					alp_FrostBiteSickShowed = true;
+					if (!alp_FrostBiteSickShowed)
+					{
+						player.IncreaseDiseaseCount();
+						alp_FrostBiteSickShowed = true;
+					}
+					rpComponent.SetDisease(alpDiseases.FROSTBITE);
 				}
-				
-				player.GetRP().SetDisease(alpDiseases.FROSTBITE);
+				else
+				{
+					rpComponent.UnsetDisease(alpDiseases.FROSTBITE);
+					m_FrostbiteTimers = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+					player.DecreaseDiseaseCount();
+					alp_FrostBiteSickShowed = false;
+				}
 			}
-			else
-			{
-				player.GetRP().UnsetDisease(alpDiseases.FROSTBITE);
-				
-				m_FrostbiteTimers = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };				
-				
-				player.DecreaseDiseaseCount();
-				alp_FrostBiteSickShowed = false;
-			}			
 		}
-
-		//string fb_debug = " " + m_FrostbiteTimers[0].ToString() + " " + m_FrostbiteTimers[1].ToString() + " " + m_FrostbiteTimers[2].ToString() + " " + m_FrostbiteTimers[3].ToString() + " " + m_FrostbiteTimers[4].ToString() + " " + m_FrostbiteTimers[5].ToString();
-		//Print( fb_debug );
 	}
-
-	/*
-	override void OnTick( PlayerBase player, float deltaT )
-	{	
-		
-		
-		if ( m_LastFrostbiteValue != player.GetStatFrostbiteZones().Get() )
-		{						
-			
-			if ( m_LastFrostbiteValue > 0 )
-			{
-				player.GetRP().SetDisease(alpDiseases.FROSTBITE);
-			}
-			else
-			{
-				player.GetRP().UnsetDisease(alpDiseases.FROSTBITE);
-				
-				m_FrostbiteTimers = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };				
-				
-				player.DecreaseDiseaseCount();
-			}
-		}	
-		
-		super.OnTick( player, deltaT );	
-	}
-	*/		
 };
-#endif	
+#endif

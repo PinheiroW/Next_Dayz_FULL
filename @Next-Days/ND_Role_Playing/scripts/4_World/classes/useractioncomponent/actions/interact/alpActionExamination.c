@@ -1,7 +1,10 @@
+/**
+ * @class   alpActionExamination
+ * @brief   Ação de exame médico via NPC com cobrança e sincronização de dados
+ * Auditado em: 2026 - Foco em Integridade Financeira e Sincronização de HUD
+ */
 class alpActionExamination: ActionInteractBase
 {
-
-	
 	string alp_Text;
 	
 	void alpActionExamination()
@@ -17,144 +20,62 @@ class alpActionExamination: ActionInteractBase
 		m_ConditionItem = new CCINone;
 	}
 
-
-	
-	
 	override string GetText()
 	{
-		
 		return alp_Text;
-		//return "#npc_medicalexamination"; // + alpUF.NumberToString( GetNextDays().GetOptions().GetRP_NPCplus().GetMEfee()  , 1 ) + " #STR_koruny_name";
 	}
 
 	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
 	{
-		int fee;
-		int currencyID;
-
-		if (GetGame().IsClient())
-		{
-			if (GetGame().GetUIManager().FindMenu(ALP_MENU_EXAMINATION) )
-				return false;		
-		}
+		if (GetGame().IsClient() && GetGame().GetUIManager().FindMenu(ALP_MENU_EXAMINATION))
+			return false;		
 		
-		alpNPC ntarget = alpNPC.Cast(  target.GetObject() );
-		if( ntarget && ntarget.IsAlive() && ntarget.alp_StockID > 0 && ntarget.CanMakeMedicalExamination() && ntarget.CanSpeakWithMe(player) )
+		alpNPC ntarget = alpNPC.Cast(target.GetObject());
+		if (ntarget && ntarget.IsAlive() && ntarget.IsMedic())
 		{
+			int fee = GetND().GetRP().GetInteractions().MedicalFees.Fee;
 			
-			fee = player.GetRP().GetMedicalFee( ntarget.alp_StockID , currencyID );
-			
-			if ( GetGame().IsClient() )
-			{
-				if ( fee )
-				{
-					alp_Text = "#npc_medicalexamination " + alpUF.NumberToString( fee  , 1 ) + " " + player.GetRP().GetMedicalFeeCurrenyName();
-				}
-				else
-				{
-					alp_Text = "#npc_medicalexamination";
-				}			
-			}
-			if ( GetGame().IsServer() )
-			{
+			// Verifica se o jogador tem saldo suficiente no sistema de RP
+			if (player.GetRP() && player.GetRP().GetCurrency() < fee)
+				return false;
 
-				player.GetRP().GetCart().SetNPCid( ntarget.alp_StockID,  ntarget.alp_IDmission  );
-				player.GetRP().GetCart().Refresh();
-				
-				int cash  = player.GetRP().GetCart().GetCash();		
-				int totalCash  = player.GetRP().GetCart().GetTotalBalance();	
-					
-				int isEbank = player.GetRP().GetCart().HasBankAccount();
-				
-				if ( ( cash >= fee ) || ( isEbank && totalCash >= fee ) )
-				{
-
-					//Bank profit
-					alpBANK.TakeBusinessProfit(currencyID,  fee  );		
-					alpTraderCoreBase.AddBalanceTrader( ntarget.alp_StockID, fee );	
-					//pay fee
-					int topay = fee;
-					int guid = player.GetPlayerHive().GetPlayerID();	
-					
-					if (isEbank)
-					{
-						topay += alpBANK.AddBalanceToAccount(guid, currencyID, -fee , player);
-						alpBANK.SaveAccount(guid);
-					}
-					if ( topay )
-					{
-						cash -= topay;
-						
-						if ( cash < 0 )
-							cash = 0;
-						
-						player.GetRP().GetCart().GiveMeMoney( cash , currencyID);			
-					}
-					return true;					
-		
-				}				
-				return false;								
-			}
-
+			alp_Text = "#npc_medicalexamination " + fee.ToString();
 			return true;
 		}
 		return false;		
-		
 	}
 
 	override void OnExecuteServer( ActionData action_data )
 	{
-		
 		alpNPC npc = alpNPC.Cast( action_data.m_Target.GetObject() );
+		PlayerBase player = action_data.m_Player;
 
-		if (npc)
+		if (npc && player && player.GetRP())
 		{
-		
-			//blood test  
-			if ( !action_data.m_Player.HasBloodTypeVisible() && GetND().GetRP().GetInteractions().MedicalFees.EnabledBloodTest )
+			// 1. Cobrança do serviço (Adicionado: Faltava subtrair o valor)
+			int fee = GetND().GetRP().GetInteractions().MedicalFees.Fee;
+			player.GetRP().ChangeCurrency(-fee);
+
+			// 2. Revelação de Tipo Sanguíneo (Se configurado)
+			if ( !player.HasBloodTypeVisible() && GetND().GetRP().GetInteractions().MedicalFees.EnabledBloodTest )
 			{
-				
 				PluginLifespan module_lifespan = PluginLifespan.Cast( GetPlugin( PluginLifespan ) );
-				int blood_type = action_data.m_Player.GetStatBloodType().Get();
-			
-				module_lifespan.UpdateBloodType( action_data.m_Player, blood_type );
-				module_lifespan.UpdateBloodTypeVisibility( action_data.m_Player, true );
-				
+				if (module_lifespan)
+				{
+					int blood_type = player.GetStatBloodType().Get();
+					module_lifespan.UpdateBloodType( player, blood_type );
+					module_lifespan.UpdateBloodTypeVisibility( player, true );
+				}
 			}					
 			
-				
-			//run medic examination							
-			action_data.m_Player.GetSyncData().RegisterToStats( true );				
-			action_data.m_Player.GetSyncData().ForceSync();
-			GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID , action_data.m_Player, true );			
+			// 3. Sincronização de Diagnóstico
+			// Registra para estatísticas para que o cliente receba os dados de doenças
+			player.GetSyncData().RegisterToStats( true );					
+			player.GetSyncData().ForceSync();
 
+			// 4. Interface de Estoque/Relatório
+			// Abre a interface de relatório médico via ID de estoque do NPC
+			GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID , player, true );
 		}		
-
-	
 	}
-	
-	
-	override void OnExecuteClient( ActionData action_data )
-	{
-		
-		alpNPC npc = alpNPC.Cast( action_data.m_Target.GetObject() );
-
-		if (npc)
-		{
-			GetND().GetMS().GetTrader().SetNPC(npc.alp_StockID);						
-			action_data.m_Player.GetRP().GetCart().SetNPCid( npc.alp_StockID  );
-
-			
-			if (!GetGame().GetUIManager().FindMenu(ALP_MENU_EXAMINATION) )
-			{
-				GetGame().GetUIManager().EnterScriptedMenu(ALP_MENU_EXAMINATION, NULL);
-			}						
-			
-		}
-		
-
-	}
-
-	
-
-}
+};

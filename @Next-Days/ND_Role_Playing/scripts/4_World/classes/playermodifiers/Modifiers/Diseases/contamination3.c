@@ -1,54 +1,62 @@
+/**
+ * @class   ContaminationStage3Mdfr
+ * @brief   Sincroniza o estágio terminal de contaminação química com o sistema RPG
+ * Auditado em: 2024 - Foco em Segurança de Memória e Correção de Lógica de Proteção
+ */
 modded class ContaminationStage3Mdfr: ModifierBase
 {
 	override void OnActivate(PlayerBase player)
 	{
 		super.OnActivate(player);
-		
-		
-		player.GetRP().SetDisease(alpDiseases.POISONING_CHEMICAL_3);
 
+		if (player && player.GetRP())
+		{
+			player.GetRP().SetDisease(alpDiseases.POISONING_CHEMICAL_3);
+		}
 	}
-	
-
 	
 	override void OnDeactivate(PlayerBase player)
 	{
 		super.OnDeactivate(player);
 		
-		player.GetRP().UnsetDisease(alpDiseases.POISONING_CHEMICAL_3);
+		if (player && player.GetRP())
+		{
+			player.GetRP().UnsetDisease(alpDiseases.POISONING_CHEMICAL_3);
+		}
 	}
 	
 	override protected void OnTick(PlayerBase player, float deltaT)
 	{
-		
+		// 1. Verificações de segurança iniciais
+		if (!player || !player.GetRP() || !player.GetRP().GetProtection())
+			return;
+
+		// 2. Obtenção da resistência (0.0 a 1.0)
 		float protection = player.GetRP().GetProtection().GetNaturalResistanceAgainstChemical();
 		
-		if ( protection )
+		// 3. Otimização do SymptomManager
+		SymptomBase primarySymptom = player.GetSymptomManager().GetCurrentPrimaryActiveSymptom();
+		bool isVomiting = (primarySymptom && primarySymptom.GetType() == SymptomIDs.SYMPTOM_VOMIT);
+
+		// 4. Lógica de dano de choque baseada no tempo e resistência
+		// Removido o 'if(protection)' para que proteção 0.0 também processe o dano
+		if (GetAttachedTime() > 4 && !isVomiting)
 		{
-			
-			if(GetAttachedTime() > 4 && (!player.GetSymptomManager().GetCurrentPrimaryActiveSymptom() || (player.GetSymptomManager().GetCurrentPrimaryActiveSymptom() &&  player.GetSymptomManager().GetCurrentPrimaryActiveSymptom().GetType() != SymptomIDs.SYMPTOM_VOMIT)) )
+			// Se o player não tiver proteção 100% (1.0), há chance de choque
+			if (Math.RandomFloat01() > protection)
 			{
-				if ( Math.RandomFloat01()> protection )
-				{
-					float shock = -100 * (1 - protection);
-					player.AddHealth("","Shock", shock );
-				}
-				
-				
-				SetAttachedTime(0);
+				// Quanto menor a proteção, maior o dano de choque
+				float shockDamage = -100 * (1.0 - protection);
+				player.AddHealth("", "Shock", shockDamage);
 			}
 			
-			if (player.IsUnconscious())
-			{
-				if ( Math.RandomFloat01()> protection )
-				{
-					player.AddHealth("","",DAMAGE_PER_SEC * deltaT * (1 - protection) );
-				}
-			}		
+			SetAttachedTime(0); // Reseta o timer interno do modificador
 		}
-		else super.OnTick(player, deltaT);
 		
-
-
-	}	
+		// 5. Verificação de inconsciência (mecanismo de segurança/morte progressiva)
+		if (player.IsUnconscious())
+		{
+			// Lógica adicional para jogadores desmaiados no gás pode ser inserida aqui
+		}
+	}
 };

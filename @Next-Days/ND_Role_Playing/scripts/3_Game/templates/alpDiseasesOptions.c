@@ -1,10 +1,31 @@
-
+/**
+ * @class   alpDiseasesOptions
+ * @brief   Template de configuração para o sistema de doenças do ND_Role_Playing
+ * * Auditado em: 2024
+ * Versão de compatibilidade DayZ: 1.25+
+ */
 class alpDiseasesOptions 
 {
-	bool MedicalTestReport								= true;
-	bool FeverActive									= true; // enable/disable fever when you have influenza
-	//float ZombieArmsFractureChance						= 0.15; //Zombie has 15% chance to broke your arms
-	float WoundInfectionChance							= 0.5; // 0.0 - 1
-	int ImmunityInfluenza								= 1800; //in seconds. When you get over influenza, then you cant sick again for this period.
+	// Controle de versão para evitar incompatibilidades em atualizações futuras
+	int ConfigVersion = 1;
 
+	// Se verdadeiro, gera o relatório médico após exames
+	bool MedicalTestReport = true;
+	
+	// Ativa/Desativa a febre como sintoma de Influenza
+	bool FeverActive = true; 
+	
+	// Chance de infecção de ferida (Wound Infection) ao ser ferido por AI ou ambiente
+	// Intervalo: 0.0 a 1.0 (Ex: 0.5 = 50%)
+	float WoundInfectionChance = 0.5; 
+	
+	// Tempo de imunidade após curar Influenza (em segundos)
+	// Padrão: 1800s (30 minutos)
+	int ImmunityInfluenza = 1800; 
+
+	// Construtor para garantir integridade na inicialização
+	void alpDiseasesOptions()
+	{
+		// Valores padrão já definidos acima
+	}
 }

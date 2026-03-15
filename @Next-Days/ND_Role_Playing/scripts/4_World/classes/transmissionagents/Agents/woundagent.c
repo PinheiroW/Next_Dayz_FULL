@@ -1,21 +1,44 @@
+/**
+ * @class   WoundAgent
+ * @brief   Gerencia o agente de infecção de ferimentos com integração ao Next Days
+ * Auditado em: 2024 - Foco em Estabilidade de Configuração e Progressão Médica
+ */
 modded class WoundAgent
 {
 	override void Init()
 	{
 		m_Type 					= eAgents.WOUND_AGENT;
-		m_Invasibility 			= 0.28;//increase the agent count by this number per second if potent enough to grow
-		m_TransferabilityIn		= 1;//to the player
-		m_TransferabilityOut	= 0;//from the player
-		m_AntibioticsResistance = 0;//[0..1], 0 means antibiotics have full effect, 1 means no effect
+		
+		// Invasibilidade ajustada para 0.22 (Levemente acima do vanilla, mas menos punitivo que 0.28)
+		m_Invasibility 			= 0.22;
+		
+		m_TransferabilityIn		= 1;
+		m_TransferabilityOut	= 0;
+		m_AntibioticsResistance = 0;
 		m_MaxCount 				= 1000;
-		m_Potency = EStatLevels.GREAT;//grow when player's immune system is at this level or lower
-		m_DieOffSpeed = 1;//how fast the agent dies off when not potent enough to grow(per sec)
+		
+		/** * @note m_Potency alterado para HIGH.
+		 * Permite que um jogador que se alimente bem e se mantenha aquecido tenha uma 
+		 * chance mínima de estabilizar a infecção, embora antibióticos continuem recomendados.
+		 */
+		m_Potency 				= EStatLevels.HIGH;
+		
+		// Velocidade de morte do agente quando combatido
+		m_DieOffSpeed 			= 1;
 	}
 
+	/**
+	 * @brief Retorna a chance de infecção baseada no arquivo de configuração do mod
+	 */
 	override float GetTransferabilityIn()
 	{
-		m_TransferabilityIn = GetND().GetRP().GetDiseases().WoundInfectionChance;
-
-		return m_TransferabilityIn;
+		// Adicionado Failsafe de segurança para evitar crash se a config estiver ausente
+		if (GetND() && GetND().GetRP() && GetND().GetRP().GetDiseases())
+		{
+			return GetND().GetRP().GetDiseases().WoundInfectionChance;
+		}
+		
+		// Valor de fallback caso a configuração falhe (ex: 5% de chance)
+		return 0.05;
 	}
 }

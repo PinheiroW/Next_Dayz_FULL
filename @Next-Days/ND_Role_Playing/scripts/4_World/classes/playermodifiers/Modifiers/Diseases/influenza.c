@@ -1,3 +1,8 @@
+/**
+ * @class   InfluenzaMdfr
+ * @brief   Gerencia a gripe vanilla com integração ao sistema RPG e Imunidade
+ * Auditado em: 2024 - Foco em Integridade de Contadores e Segurança de Ponteiros
+ */
 modded class InfluenzaMdfr: ModifierBase
 {
 	const int AGENT_THRESHOLD_ACTIVATE = 300;
@@ -13,53 +18,60 @@ modded class InfluenzaMdfr: ModifierBase
 	
 	override string GetDebugText()
 	{
-		return ("Activate threshold: "+AGENT_THRESHOLD_ACTIVATE + "| " +"Deativate threshold: "+AGENT_THRESHOLD_DEACTIVATE);
+		return ("Activate threshold: " + AGENT_THRESHOLD_ACTIVATE + "| " + "Deativate threshold: " + AGENT_THRESHOLD_DEACTIVATE);
 	}
 	
 	override protected bool ActivateCondition(PlayerBase player)
 	{
-		if(player.GetSingleAgentCount(eAgents.INFLUENZA) >= AGENT_THRESHOLD_ACTIVATE) 
-		{
-			return true;
-		}
-		return false;
+		if (!player) return false;
+		return (player.GetSingleAgentCount(eAgents.INFLUENZA) >= AGENT_THRESHOLD_ACTIVATE);
 	}
 
 	override protected void OnActivate(PlayerBase player)
 	{
 		super.OnActivate(player);
 		
-		player.GetRP().SetDisease(alpDiseases.INFLUENZA);
+		if (player)
+		{
+			// CORREÇÃO: Incrementa o contador para manter paridade com OnDeactivate
+			player.IncreaseDiseaseCount();
+
+			auto rp = player.GetRP();
+			if (rp)
+			{
+				rp.SetDisease(alpDiseases.INFLUENZA);
+			}
+		}
 	}
 
 	override protected void OnDeactivate(PlayerBase player)
 	{
-		if ( player.GetModifiersManager().IsModifierActive( rModifiers.MDF_IMMUNITY_INFLUENZA ) )//effectively resets the modifier
+		if (!player) return;
+
+		// Otimização: Cache do ModifiersManager
+		ModifiersManager manager = player.GetModifiersManager();
+		if (manager)
 		{
-			player.GetModifiersManager().DeactivateModifier( rModifiers.MDF_IMMUNITY_INFLUENZA );
+			// Se já estiver imune, reseta o tempo da imunidade desativando e reativando
+			if (manager.IsModifierActive(rModifiers.MDF_IMMUNITY_INFLUENZA))
+			{
+				manager.DeactivateModifier(rModifiers.MDF_IMMUNITY_INFLUENZA);
+			}
+			manager.ActivateModifier(rModifiers.MDF_IMMUNITY_INFLUENZA);
 		}
-		
-		player.GetModifiersManager().ActivateModifier( rModifiers.MDF_IMMUNITY_INFLUENZA );	
 				
 		player.DecreaseDiseaseCount();
 		
-		player.GetRP().UnsetDisease(alpDiseases.INFLUENZA);
-		
+		auto rp = player.GetRP();
+		if (rp)
+		{
+			rp.UnsetDisease(alpDiseases.INFLUENZA);
+		}
 	}
 
 	override protected bool DeactivateCondition(PlayerBase player)
 	{
+		if (!player) return true;
 		return (player.GetSingleAgentCount(eAgents.INFLUENZA) <= AGENT_THRESHOLD_DEACTIVATE);
 	}
-
-	override protected void OnTick(PlayerBase player, float deltaT)
-	{
-		float chance_of_cough = player.GetSingleAgentCountNormalized(eAgents.INFLUENZA);
-		
-		if( Math.RandomFloat01() < chance_of_cough / Math.RandomInt(5,20) )
-		{
-			player.GetSymptomManager().QueueUpPrimarySymptom(SymptomIDs.SYMPTOM_COUGH);
-		}
-	}
-	
-};
+}

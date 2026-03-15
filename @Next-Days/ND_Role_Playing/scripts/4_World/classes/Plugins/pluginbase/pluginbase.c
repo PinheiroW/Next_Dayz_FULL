@@ -1,47 +1,27 @@
-// Script File
+/**
+ * @class   PluginPlayerStatus
+ * @brief   Mapeia os IDs dos notificadores para os ícones da HUD
+ * Auditado em: 2024 - Foco em Ciclo de Vida de Plugin e Estabilidade Visual
+ */
+
+// Define a chave caso ela não exista globalmente para evitar erros de compilação
+#ifndef NTFKEY_ALPTIREDNESS
+const int NTFKEY_ALPTIREDNESS = 150; // Use um ID alto para evitar conflitos com vanilla
+#endif
+
 modded class PluginPlayerStatus extends PluginBase
 {
-	/*
-	ref multiMap<int, string> 	m_NotifiersLabel;
-	ref multiMap<int, int>		m_NotifiersIndexColor;
-
-	private ref multiMap<int, string>	m_NotifiersIcons;
-
-	*/
-	
+	/**
+	 * @brief Construtor modificado
+	 */
 	void PluginPlayerStatus()
 	{
-		/*
-		m_NotifiersLabel = new multiMap<int, string>; // [key] label
-		m_NotifiersIndexColor = new multiMap<int, int>; // [key] index, color
-
-		m_NotifiersIcons = new multiMap<int, string>; // [key] iconName
-		
-		m_NotifiersIcons.Insert( NTFKEY_HUNGRY, "iconHunger" );
-		m_NotifiersIcons.Insert( NTFKEY_THIRSTY, "iconThirsty" );
-		m_NotifiersIcons.Insert( NTFKEY_SICK, "iconHealth" );
-		m_NotifiersIcons.Insert( NTFKEY_BACTERIA, "iconBacteria" );
-		m_NotifiersIcons.Insert( NTFKEY_BLEEDISH, "iconBlood" );
-		m_NotifiersIcons.Insert( NTFKEY_FEVERISH, "iconTemperature" );
-		m_NotifiersIcons.Insert( NTFKEY_FRACTURE, "iconFracture" );
-		*/
-		
-		m_NotifiersIcons.Insert( NTFKEY_ALPTIREDNESS, "iconTiredness" );
-	}
-	
-	
-	override void DisplayTendency( int key, int tendency, int status = 1 )
-	{
-		super.DisplayTendency( key, tendency, status  );
-			
-		
-		if ( key == NTFKEY_ALPTIREDNESS )
+		// No DayZ, m_NotifiersIcons é instanciado no construtor da classe base.
+		// Adicionamos nossos ícones customizados aqui com verificação de segurança.
+		if (m_NotifiersIcons)
 		{
-			PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
-			
-			if (player.GetRP())
-				player.GetRP().SetFatigueStatus( status );
+			// Associa o ID do notificador ao nome da imagem no seu layout de HUD (ex: iconTiredness)
+			m_NotifiersIcons.Insert( NTFKEY_ALPTIREDNESS, "iconTiredness" );
 		}
 	}
-
 }

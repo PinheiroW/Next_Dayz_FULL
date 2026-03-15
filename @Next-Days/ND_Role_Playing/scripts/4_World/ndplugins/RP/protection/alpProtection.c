@@ -1,61 +1,74 @@
-// Script File
-
-
-
-
+/**
+ * @class   alpProtection
+ * @brief   Gerencia a resistência passiva do jogador contra Radiação e Gás no Next Days
+ * Auditado em: 2026 - Foco em Segurança de SyncData (Rede) e Prevenção de Null Pointers
+ */
 modded class alpProtection 
 {
-
-	
-	/*
-	float GetNaturalResistanceAgainstRadiation()
-	{		
-		return 0;
-	}
-	float GetNaturalResistanceAgainstChemical()
-	{		
-		return 0;
-	}	
-	float GetNaturalResistanceAgainstBiologic()
-	{		
-		return 0;
-	}		
-	*/
-	
 	override float GetNaturalResistanceAgainstRadiation()
 	{	
+		// 1. Failsafe Global: Garante que as configurações centrais do mod carregaram
+		if ( !GetND() || !GetND().GetRP() || !GetND().GetRP().GetPerksOptions() ) 
+		{
+			return 0.0;
+		}
+
 		if ( !GetND().GetRP().GetPerksOptions().EnablePerkRadiationResistance )
 		{		
-			return 0;
+			return 0.0;
 		}		
 			
-		int level;
+		// 2. Proteção do Jogador e dos Dados Sincronizados
+		if ( !alp_Player || !alp_Player.GetSyncData() ) 
+		{
+			return 0.0;
+		}
 		
-		level	= alp_Player.GetSyncData().GetElement( alpRPelements.RAD_RESIST ).GetValue();
+		// 3. Busca Segura no Dicionário (Evita Crash se o elemento não existir)
+		auto syncElement = alp_Player.GetSyncData().GetElement( alpRPelements.RAD_RESIST );
+		if ( !syncElement ) 
+		{
+			return 0.0;
+		}
 		
-		float resitance	= GetND().GetRP().GetPerkRadiationResistanceMdf( level );
+		int level = syncElement.GetValue();
+		float resistance = GetND().GetRP().GetPerkRadiationResistanceMdf( level );
 
-		return resitance/100;
+		// 4. Divisão com tipagem explícita de ponto flutuante
+		return resistance / 100.0;
 	}	
 	
 
 	override float GetNaturalResistanceAgainstChemical()
 	{	
+		// 1. Failsafe Global
+		if ( !GetND() || !GetND().GetRP() || !GetND().GetRP().GetPerksOptions() ) 
+		{
+			return 0.0;
+		}
+
 		if ( !GetND().GetRP().GetPerksOptions().EnablePerkToxicResistance )
 		{		
-			return 0;
+			return 0.0;
 		}
 			
-		int level;
+		// 2. Proteção do Jogador e dos Dados Sincronizados
+		if ( !alp_Player || !alp_Player.GetSyncData() ) 
+		{
+			return 0.0;
+		}
 		
-		level	= alp_Player.GetSyncData().GetElement( alpRPelements.TOXIC_RESIST ).GetValue();
+		// 3. Busca Segura no Dicionário
+		auto syncElement = alp_Player.GetSyncData().GetElement( alpRPelements.TOXIC_RESIST );
+		if ( !syncElement ) 
+		{
+			return 0.0;
+		}
 		
-		float resitance	= GetND().GetRP().GetPerkToxicResistanceMdf( level );
+		int level = syncElement.GetValue();
+		float resistance = GetND().GetRP().GetPerkToxicResistanceMdf( level );
 
-		return resitance/100;
+		// Corrigido typo (resitance -> resistance) e aplicada tipagem de ponto flutuante
+		return resistance / 100.0;
 	}	
 }
-
-
-
-

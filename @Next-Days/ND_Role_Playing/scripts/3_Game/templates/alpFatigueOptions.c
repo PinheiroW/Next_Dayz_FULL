@@ -1,114 +1,123 @@
+/**
+ * @class   alpFatigueOptions
+ * @brief   Gerencia os parâmetros de fadiga e bônus de consumíveis
+ * Auditado em: 2024 - Otimização de busca e segurança de strings
+ */
+
+class alpFoodBonuses
+{
+	string Item;
+	float  Energy;
+	float  Water;
+	float  Health;
+	float  Blood;
+	float  Shock;
+	
+	void alpFoodBonuses(string name, float e, float w, float h, float b, float s)
+	{
+		Item = name;
+		Energy = e;
+		Water = w;
+		Health = h;
+		Blood = b;
+		Shock = s;
+	}
+}
+
+class alpLiquidBonuses
+{
+	int   LiquidID;
+	float Energy;
+	float Water;
+	float Health;
+	float Blood;
+	float Shock;
+	
+	void alpLiquidBonuses(int name, float e, float w, float h, float b, float s)
+	{
+		LiquidID = name;
+		Energy = e;
+		Water = w;
+		Health = h;
+		Blood = b;
+		Shock = s;
+	}
+}
 
 class alpFatigueOptions 
 {
-	float RegenerationBlood								= 6; //regeneration per second when you sleeping 
-	float RegenerationHealth							= 1.5; //health reg per second
-	float FatigueBasal									= 0.0025; //energy loss per second while idle (max energy is 100)
-	float FatigueWalk									= 0.005; //energy loss per second while walking (max energy is 100)
-	float FatigueJog									= 0.008; //energy loss per second while jogging (max energy is 100)
-	float FatigueSprint									= 0.016; //energy loss per second while sprintingn (max energy is 100)
-	float FatigueRadiationMultiplier					= 1.2;  //multiplies energy loss while you staying in radiation zone
-	float FatigueRadiationSickMultiplier				= 2;  //multiplies energy loss while you getting radiation disease
-	float FatigueSickMultiplier							= 1.5;  //multiplies energy loss while you getting common diseases
-	float FatigueHeatMultiplier							= 2;  //multiplies energy loss while you have bad heat confort
-	float Resting										= 2; //energy increase per second while resting 
-	float RestingPenaltyHeat							= 0.5; //when you do not have heat comfort;
-	float RestingPenaltyShelter							= 0.5; //when you are not in building or near sleeping bag;
-	bool ClosedEyesWhileSleeping						= true;// 0/1
-	float EpinephrineEnergyBoost						= 10; //max energy is 100
-	ref array<string> SleepingBag						= {};
+	int ConfigVersion = 1;
+
+	float RegenerationBlood			= 6; 
+	float RegenerationHealth		= 1.5; 
+	float FatigueBasal				= 0.0025; 
+	float FatigueWalk				= 0.005; 
+	float FatigueJog				= 0.008; 
+	float FatigueSprint				= 0.016; 
+	float FatigueRadiationMultiplier		= 1.2;  
+	float FatigueRadiationSickMultiplier	= 2;  
+	float FatigueSickMultiplier		= 1.5;  
+	float FatigueHeatMultiplier		= 2;  
+	float Resting					= 2; 
+	float RestingPenaltyHeat		= 0.5; 
+	float RestingPenaltyShelter		= 0.5; 
+	bool ClosedEyesWhileSleeping	= true;
+	float EpinephrineEnergyBoost	= 10; 
+	
 	ref array<ref alpFoodBonuses> FoodBonuses;
 	ref array<ref alpLiquidBonuses> LiquidBonuses;
-	
+
 	void alpFatigueOptions()
 	{
 		FoodBonuses = new array<ref alpFoodBonuses>;
 		
-		FoodBonuses.Insert( new alpFoodBonuses( "SodaCan_Cola", 0.02, 0, 0,0 ) );
-		FoodBonuses.Insert( new alpFoodBonuses( "SodaCan_Pipsi", 0.02, 0, 0,0 ) );
-		FoodBonuses.Insert( new alpFoodBonuses( "SodaCan_Kvass", -0.01, 0.1, -0.1,0 ) );	
-		
+		// Sugestão: Mantenha nomes de classes sempre em minúsculo na config para consistência
+		FoodBonuses.Insert( new alpFoodBonuses( "apple", -0.01, 0.1, -0.1, 0, 0 ) );
+		FoodBonuses.Insert( new alpFoodBonuses( "banana", -0.01, 0.1, -0.1, 0, 0 ) );
+		FoodBonuses.Insert( new alpFoodBonuses( "orange", -0.01, 0.1, -0.1, 0, 0 ) );
+		FoodBonuses.Insert( new alpFoodBonuses( "plum", -0.01, 0.1, -0.1, 0, 0 ) );
+		FoodBonuses.Insert( new alpFoodBonuses( "sodacan_kvass", -0.01, 0.1, -0.1, 0, 0 ) );	
 		
 		LiquidBonuses = new array<ref alpLiquidBonuses>;
 		
-		LiquidBonuses.Insert( new alpLiquidBonuses( 2048, -0.05, 0.6, -0.6,-0.2 ) ); //vodka
-		LiquidBonuses.Insert( new alpLiquidBonuses( 4096, -0.01, 0.1, -0.1,0 ) ); //bear
-
+		LiquidBonuses.Insert( new alpLiquidBonuses( 2048, -0.05, 0.6, -0.6, -0.2, 0 ) ); // vodka
+		LiquidBonuses.Insert( new alpLiquidBonuses( 4096, -0.01, 0.1, -0.1, 0, 0 ) );    // beer
 	}	
 	
 	alpFoodBonuses GetFoodBonus(string name)
 	{
-		alpFoodBonuses	food;
-	
-		if (FoodBonuses)
+		if (!FoodBonuses) return null;
+		
+		// Otimização: Cache do tamanho da array e normalização da string
+		int count = FoodBonuses.Count();
+		string searchName = name;
+		searchName.ToLower();
+
+		for (int i = 0; i < count; i++)
 		{
-			for (int i = 0; i < FoodBonuses.Count();i++)
+			string itemInList = FoodBonuses.Get(i).Item;
+			itemInList.ToLower();
+
+			if (searchName == itemInList)
 			{
-				if ( name == FoodBonuses.Get(i).Item )
-				{
-					food = FoodBonuses.Get(i);
-					break;
-				}
+				return FoodBonuses.Get(i);
 			}
 		}
-		
-		
-		return food;
+		return null;
 	}
 	
-	alpLiquidBonuses GetLiquidBonus(int name)
+	alpLiquidBonuses GetLiquidBonus(int liquidId)
 	{
-		alpLiquidBonuses lid;
-	
-		if (LiquidBonuses)
+		if (!LiquidBonuses) return null;
+		
+		int count = LiquidBonuses.Count();
+		for (int i = 0; i < count; i++)
 		{
-			for (int i = 0; i < LiquidBonuses.Count();i++)
+			if (liquidId == LiquidBonuses.Get(i).LiquidID)
 			{
-				if ( name == LiquidBonuses.Get(i).LiquidID )
-				{
-					lid = LiquidBonuses.Get(i);
-					break;
-				}
+				return LiquidBonuses.Get(i);
 			}
 		}
-		
-		
-		return lid;
+		return null;
 	}	
-}
-
-class alpFoodBonuses 
-{
-	string Item;
-	float Energy;
-	float Alcohol;
-	float Radiation;
-	float Toxicity;
-	
-	void alpFoodBonuses(string n, float en, float ac, float rr, float tt)
-	{
-		Item 			= n;
-		Energy			= en;
-		Alcohol			= ac;
-		Radiation		= rr;
-		Toxicity		= tt;
-	}
-}
-
-class alpLiquidBonuses 
-{
-	int LiquidID;
-	float Energy;
-	float Alcohol;
-	float Radiation;
-	float Toxicity;
-	
-	void alpLiquidBonuses(int liqID, float en, float ac, float rr, float tt)
-	{
-		LiquidID 		= liqID;
-		Energy			= en;
-		Alcohol			= ac;
-		Radiation		= rr;
-		Toxicity		= tt;
-	}
 }

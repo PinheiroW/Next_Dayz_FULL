@@ -1,90 +1,83 @@
+/**
+ * @class   alpStatsTendencyTiredness
+ * @brief   Sincroniza tendência e gravidade do cansaço para o HUD
+ * Auditado em: 2026 - Foco em Bitmasking e Estabilidade de HUD
+ */
 class alpStatsTendencyTiredness extends alpStatsBase
 {
-	protected int TENDENCY_MASK = 7;// first x bits
-	protected int SERIOUSNESS_BIT_MASK = 7;// second x bits
-	protected int SERIOUSNESS_BIT_OFFSET = 3;//bit offset - points to where seriousness bit starts(TODO: get as log from mask)
+	protected int TENDENCY_MASK = 7;           // Primeiros 3 bits (0-7)
+	protected int SERIOUSNESS_BIT_OFFSET = 3;  // Offset para gravidade
 	
-	int		alp_ValueLast = -99999;
-		
-	
-	PluginPlayerStatus 	m_ModulePlayerStatus;
+	int alp_ValueLast = -99999;
+	protected PluginPlayerStatus m_ModulePlayerStatus;
 	
 	void alpStatsTendencyTiredness(PlayerBase player)
 	{
-		m_ModulePlayerStatus = PluginPlayerStatus.Cast(GetPlugin(PluginPlayerStatus));
-		
 		alp_Type = alpRPelements.TDCY_TIREDNESS;
-		NUM_OF_BITS = 6;
+		NUM_OF_BITS = 6; // 3 bits para tendência + 3 para gravidade
+		
+		// 1. PROTEÇÃO DE LADO: Só busca o plugin se estivermos no Cliente
+		if (GetGame().IsClient() || !GetGame().IsMultiplayer())
+		{
+			m_ModulePlayerStatus = PluginPlayerStatus.Cast(GetPlugin(PluginPlayerStatus));
+		}
 	}
 	
 	override void Update()
 	{
-		//alp_Value = alp_Player.GetStatTiredness().Get();
+		// 2. REATIVAÇÃO DO SISTEMA: Busca o valor real do cansaço do jogador
+		if (alp_Player && alp_Player.GetStatTiredness())
+		{
+			// Nota: O valor aqui deve vir processado como bitmask (Tendência + Gravidade)
+			// vindo da lógica do componente StatTiredness.
+			alp_Value = alp_Player.GetStatTiredness().Get();
+		}
 	}
-	
 	
 	override void SetValue(int value)
 	{
 		alp_Value = value;
 		
-		//tendency 
-		
-		UpdateHUD();
+		// 3. ATUALIZAÇÃO SEGURA: Só tenta atualizar o HUD no Cliente
+		if (m_ModulePlayerStatus && IsValueChanged())
+		{
+			UpdateHUD();
+		}
 	}	
 
-	
 	bool IsValueChanged()
 	{
-		return !(alp_Value == alp_ValueLast);
+		return (alp_Value != alp_ValueLast);
 	}
 	
 	void UpdateHUD()
 	{
 		alp_ValueLast = alp_Value;
 		
+		// Decodificação dos bits (Bitmasking)
 		int seriousness = alp_Value >> SERIOUSNESS_BIT_OFFSET;
 		int tendency = TENDENCY_MASK & alp_Value;		
 		
-		if(tendency > 3) 
+		// Lógica de tendência (Up/Down/Stable)
+		if (tendency > 3) 
 		{
 			tendency = -(tendency - 3);
 		}		
 		
+		// 4. NOTIFICAÇÃO: Chave customizada NTFKEY_ALPTIREDNESS deve estar registrada no PluginPlayerStatus
 		m_ModulePlayerStatus.DisplayTendency(NTFKEY_ALPTIREDNESS, tendency, TranslateLevelToStatus(seriousness));
 	}
 	
-	int BitToDec(int mask, int index, int length)
-	{
-		int value = mask & (GetCompareMask() << index);
-		value = value >> index;
-		return value;
-	}
-
-
 	int TranslateLevelToStatus(int level)
 	{
-		if( level == DSLevels.WARNING )
-			return 2;
-		if( level == DSLevels.CRITICAL )
-			return 3;
-		if( level == DSLevels.BLINKING )
-			return 4;
-		if( level == DSLevels.EXTRA )
-			return 5;
-		return 1;
+		// 5. MAPEAMENTO DE CORES DO HUD:
+		// 1-2: Branco/Cinza | 3: Amarelo | 4: Laranja | 5: Vermelho
+		switch (level)
+		{
+			case DSLevels.WARNING:  return 3; // Amarelo
+			case DSLevels.CRITICAL: return 4; // Laranja
+			case DSLevels.BAD:      return 5; // Vermelho
+		}
+		return 1; // Normal / Branco
 	}
-	
-	void SetSeriousnessLevel( DSLevels level )
-	{
-		alp_Value = (~(SERIOUSNESS_BIT_MASK << SERIOUSNESS_BIT_OFFSET)) & alp_Value;//clear the last value
-		alp_Value = (level << SERIOUSNESS_BIT_OFFSET)  | alp_Value;
-	}	
-	void SetTendency(int tendency)
-	{
-		alp_Value = (~TENDENCY_MASK) & alp_Value;//clear the last value
-		alp_Value =  tendency | alp_Value;//insert the new one
-		//PrintString(m_Value.ToString());
-	}	
 }
-
-

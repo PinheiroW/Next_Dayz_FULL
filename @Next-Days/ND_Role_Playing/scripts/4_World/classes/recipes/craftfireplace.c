@@ -1,107 +1,64 @@
+/**
+ * @class   CraftFireplace
+ * @brief   Modifica a receita da fogueira para aceitar dinheiro e banha como componentes
+ * Auditado em: 2024 - Foco em Integridade de Inventário e Fluxo de Crafting
+ */
 modded class CraftFireplace extends RecipeBase
-{
+{	
 	override void Init()
 	{
-		super.Init();
-		//ingredient 1
-		InsertIngredient(0,"alp_Money");//you can insert multiple ingredients this way
-		//ingredient 2
-		InsertIngredient(1,"alp_Money");//you can insert multiple ingredients this way	
+		super.Init(); // Mantém gravetos e panos originais
 
-		//ingredient 1
-		InsertIngredient(0,"Lard");//you can insert multiple ingredients this way
-		//ingredient 2
-		InsertIngredient(1,"Lard");//you can insert multiple ingredients this way	
+		// Adiciona Dinheiro como opção (Slot 0 ou 1)
+		InsertIngredient(0, "alp_Money");
+		InsertIngredient(1, "alp_Money");
+
+		// Adiciona Banha como opção
+		InsertIngredient(0, "Lard");
+		InsertIngredient(1, "Lard");
 	}
 
-	override void Do( ItemBase ingredients[], PlayerBase player, array<ItemBase> results, float specialty_weight )//gets called upon recipe's completion
+	override void Do(ItemBase ingredients[], PlayerBase player, array<ItemBase> results, float specialty_weight)
 	{
-		ItemBase result = ItemBase.Cast( results.Get( 0 ) );
-		ItemBase ingredient1 = ingredients[0];
-		ItemBase ingredient2 = ingredients[1];
+		ItemBase result = ItemBase.Cast(results.Get(0));
+		if (!result) return;
 
-		//clear inventory reservation
-		if ( !GetGame().IsMultiplayer() )
+		for (int i = 0; i < 2; i++)
 		{
-			InventoryLocation loc = new InventoryLocation;
-			ingredient1.GetInventory().GetCurrentInventoryLocation( loc );
-			player.GetInventory().ClearInventoryReservationEx( ingredient1, loc );
-			ingredient2.GetInventory().GetCurrentInventoryLocation( loc );
-			player.GetInventory().ClearInventoryReservationEx( ingredient2, loc );			
-		}
-		
-		//Ingredient 1
-		if ( ingredient1.GetQuantity() <= 0 || ingredient1.GetType() == "Lard" )
-		{
-			if ( GetGame().IsServer() && GetGame().IsMultiplayer() )
+			ItemBase ingredient = ingredients[i];
+			if (!ingredient) continue;
+
+			// Caso especial: Se o ingrediente for BANHA, tentamos anexar à fogueira
+			if (ingredient.GetType() == "Lard")
 			{
-				
-				if (ingredient1.GetType() == "Lard")
-				{
-					player.ServerTakeEntityToTargetAttachmentEx( result, ingredient1, InventorySlots.GetSlotIdFromString("LardALP")  );	
-				}
-				else
-					player.ServerTakeEntityToTargetAttachment( result, ingredient1 ); // multiplayer server side
-				
+				TransferToAttachmentALP(player, result, ingredient, "LardALP");
+			}
+			else if (ingredient.GetQuantity() <= 0)
+			{
+				// Comportamento padrão: move o item inteiro se não tiver quantidade (ex: Rags unitários)
+				player.ServerTakeEntityToTargetAttachment(result, ingredient);
 			}
 			else
 			{
-				if (ingredient1.GetType() == "Lard")
-				{
-					player.LocalTakeEntityToTargetAttachmentEx( result, ingredient1, InventorySlots.GetSlotIdFromString("LardALP")  );	
-				}
-				else
-					player.LocalTakeEntityToTargetAttachment( result, ingredient1 ); // single player or multiplayer client side
+				// Comportamento padrão: reduz 1 da quantidade
+				ingredient.AddQuantity(-1);
 			}
 		}
-		else
-		{
-			string ingredient1_classname = ingredient1.GetType();
-			ItemBase attachment1 = ItemBase.Cast( result.GetInventory().CreateAttachment( ingredient1_classname ) );
-			MiscGameplayFunctions.TransferItemProperties( ingredient1, attachment1 );
-			attachment1.SetQuantity( 1 );
-			attachment1.SetCleanness(0);
-			
-			//set quantity to ingredient
-			ingredient1.AddQuantity( -1 );
-		}
-		
-		//Ingredient 2
-		if ( ingredient2.GetQuantity() <= 0  || ingredient2.GetType() == "Lard" )
-		{
-			if ( GetGame().IsServer() && GetGame().IsMultiplayer() )
-			{
-				
-				if (ingredient2.GetType() == "Lard")
-				{
-					player.ServerTakeEntityToTargetAttachmentEx( result, ingredient2, InventorySlots.GetSlotIdFromString("LardALP")  );	
-				}
-				else
-					player.ServerTakeEntityToTargetAttachment( result, ingredient2 ); // multiplayer server side
-			
-				
-			}
-			else
-			{
+	}
 
-				if (ingredient2.GetType() == "Lard")
-				{
-					player.LocalTakeEntityToTargetAttachmentEx( result, ingredient2, InventorySlots.GetSlotIdFromString("LardALP")  );	
-				}
-				else
-					player.LocalTakeEntityToTargetAttachment( result, ingredient2 ); // single player or multiplayer client side
-				
-			}
-		}
-		else
+	/**
+	 * @brief Helper seguro para mover itens para anexos durante o craft
+	 */
+	protected void TransferToAttachmentALP(PlayerBase player, ItemBase target, ItemBase ingredient, string slotName)
+	{
+		int slotId = InventorySlots.GetSlotIdFromString(slotName);
+		if (slotId == InventorySlots.INVALID) return;
+
+		if (GetGame().IsServer())
 		{
-			string ingredient2_classname = ingredient2.GetType();
-			ItemBase attachment2 = ItemBase.Cast( result.GetInventory().CreateAttachment( ingredient2_classname ) );
-			MiscGameplayFunctions.TransferItemProperties( ingredient2, attachment2 );
-			attachment2.SetQuantity( 1 );
-			attachment2.SetCleanness(0);
-			//set quantity to ingredient
-			ingredient2.AddQuantity( -1 );
+			// No servidor, usamos o comando extendido de movimentação
+			player.ServerTakeEntityToTargetAttachmentEx(target, ingredient, slotId);
 		}
-	}	
-}
+		// Nota: O motor sincroniza automaticamente para o cliente
+	}
+};

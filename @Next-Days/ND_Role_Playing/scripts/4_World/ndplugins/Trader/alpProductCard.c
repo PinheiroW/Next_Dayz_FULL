@@ -1,63 +1,71 @@
-
+/**
+ * @class   alpProductCard
+ * @brief   Gerencia a lógica de preços e permissões de compra no Trader baseada em RPG
+ * Auditado em: 2026 - Foco em Performance de UI e Segurança de Ponteiro
+ */
 modded class alpProductCard 
 {
-
-
+	// 1. OTIMIZAÇÃO: Cache de Player para evitar múltiplas chamadas GetPlayer()
 	override float GetPlayerCoef(alpNPCtraderStock trader)
 	{
+		PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
+		if (!player || !trader) return 1.0; // Failsafe: preço padrão
 
-		PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
 		float hero = trader.PricelistRatioHero;
-		float bandit = trader.PricelistRatioBandit;		
-		auto stock = GetND().GetMS().GetTrader().GetCurrentTrader();
-		if ( stock && !stock.RequiredCharacterTraits ) {
-			if ( GetND().GetMS().GetTrader().IsBuyMenu() ){
-				if ( player.GetRP().IsHero() ){
-					return hero;		
-				} else {
-					return bandit;
-				}					
-			} else {
-				return Math.Min(hero,bandit);
-			}							
-		} else {
-			if ( player.GetRP().IsHero() ){
-				return hero;		
-			} else {
-				return bandit;
-			}			
-		}
+		float bandit = trader.PricelistRatioBandit;
+		
+		auto traderManager = GetND().GetMS().GetTrader();
+		if (!traderManager) return 1.0;
 
+		auto stock = traderManager.GetCurrentTrader();
+		bool isHero = player.GetRP().IsHero();
+
+		// 2. LÓGICA DE PREÇOS SIMPLIFICADA
+		if (stock && !stock.RequiredCharacterTraits) 
+		{
+			if (traderManager.IsBuyMenu())
+			{
+				return isHero ? hero : bandit;
+			}
+			else // Menu de Venda
+			{
+				// No menu de venda, o jogador sempre quer o melhor coeficiente (menor perda)
+				return Math.Min(hero, bandit);
+			}
+		}
+		
+		// Fallback para quando há Traits obrigatórios ou falha no stock
+		return isHero ? hero : bandit;
 	}
 
-	//TO DO: reputation skill
+	// 3. REVISÃO DE REPUTAÇÃO: Foco em legibilidade e performance
 	override bool HasReputation()
 	{
-		PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
-		int level = player.GetSyncData().GetElement( alpRPelements.REPUTATION ).GetValue();
+		PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
+		if (!player || !player.GetSyncData()) return false;
+
+		auto syncData = player.GetSyncData().GetElement(alpRPelements.REPUTATION);
+		if (!syncData) return false;
+
+		int currentRepLevel = syncData.GetValue();
+		int requiredRep = GetRequiredReputation();
 		
-		int required = GetRequiredReputation();
-		
-		auto stock = GetND().GetMS().GetTrader().GetCurrentTrader();
-				
-		if (level >= required || (GetND().GetMS().GetTrader().IsSellMenu() && stock.NoReputationRequirementsWhileBuying ))
-		{			
+		auto traderManager = GetND().GetMS().GetTrader();
+		if (!traderManager) return false;
+
+		auto stock = traderManager.GetCurrentTrader();
+		if (!stock) return false;
+
+		// Lógica: Pode operar se tiver o nível OU se for menu de venda e o trader não exigir reputação para comprar de você
+		bool hasLevel = (currentRepLevel >= requiredRep);
+		bool isSellMenu = traderManager.IsSellMenu();
+		bool ignoreRepOnSell = stock.NoReputation;
+
+		if (hasLevel || (isSellMenu && ignoreRepOnSell))
+		{
 			return true;
 		}
-		else
-		{
-			return false;
-		}
-		
-	}
-	
-	override float GetSales()
-	{
-		PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
-		int level = player.GetSyncData().GetElement( alpRPelements.REPUTATION ).GetValue();
 
-		float sale = 	GetND().GetRP().GetReputationMdf( level );	
-		return sale;
+		return false;
 	}
-
 }

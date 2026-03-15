@@ -1,3 +1,9 @@
+/**
+ * @class   alpRP
+ * @brief   Módulo Central de Roleplay (Doenças, Perks e Status)
+ * Auditado em: 2026 - Foco em Correção de Sintaxe, Failsafes Globais e Segurança de SyncData
+ */
+
 enum alpDiseases
 {
 	DECONTAMINATION = -2,//non-sync
@@ -22,7 +28,6 @@ enum alpDiseases
 	DRUNKENNESS = 65536,
 }
 
-
 modded class alpRP
 {
 	//fatigue
@@ -32,7 +37,6 @@ modded class alpRP
 	protected int alp_Diseases;	
 	
 	ref map<int, ref alpDisease> alp_MedicList;
-	
 	
 	bool alp_WasDecontamined;
 	
@@ -48,7 +52,6 @@ modded class alpRP
 		}
 	}
 	
-	
 	void SetDecontaminationEvent( bool state )
 	{
 		alp_WasDecontamined = state;
@@ -59,16 +62,12 @@ modded class alpRP
 		return alp_WasDecontamined;
 	}
 	
-	
-	
 	void CreateDiseasesList()
 	{
 		alp_MedicList = new map<int, ref alpDisease>;
 		
 		alp_MedicList.Set(alpDiseases.DECONTAMINATION,new alpDecontaminationDisease(alp_Player,alpDiseases.DECONTAMINATION,"#action_decontamination",true,true,"set:ccgui_enforce image:Icon40WalrusUpgradeMarshes"));
-		
 		alp_MedicList.Set(alpDiseases.BLEEDING,new alpBleedingDisease(alp_Player,alpDiseases.BLEEDING,"#me_bleeding_desc",true,true,"set:dayz_gui image:iconBleeding"));
-		
 		alp_MedicList.Set(alpDiseases.BRAINDISEASE,new alpBrainDisease(alp_Player,alpDiseases.BRAINDISEASE,"#me_braindisease_desc",true,true,"set:dayz_gui image:iconBacteria"));
 		alp_MedicList.Set(alpDiseases.COMMONCOLD,new alpCommonCold(alp_Player,alpDiseases.COMMONCOLD,"#me_commoncold_desc",true,true,"set:dayz_gui image:iconTemperature4"));
 		alp_MedicList.Set(alpDiseases.CHOLERA,new alpCholera(alp_Player,alpDiseases.CHOLERA,"#me_cholera_desc",true,true,"set:dayz_gui image:iconBacteria"));
@@ -77,20 +76,16 @@ modded class alpRP
 		alp_MedicList.Set(alpDiseases.WOUNDINFECTION_1,new alpWoundInfection1(alp_Player,alpDiseases.WOUNDINFECTION_1,"#me_woundinfection_desc",true,true,"set:dayz_gui image:iconBacteria"));
 		alp_MedicList.Set(alpDiseases.WOUNDINFECTION_2,new alpWoundInfection2(alp_Player,alpDiseases.WOUNDINFECTION_2,"#me_woundinfection_desc",true,true,"set:dayz_gui image:iconBacteria"));
 		alp_MedicList.Set(alpDiseases.POISONING,new alpPoisoning(alp_Player,alpDiseases.POISONING,"#me_poisoning_desc",true,true,"set:dayz_gui image:iconPoisoned"));
-		
 		alp_MedicList.Set(alpDiseases.FEVER,new alpFever(alp_Player,alpDiseases.FEVER,"#me_fever_desc",true,false,"set:dayz_gui image:iconBacteria"));
-		
 		alp_MedicList.Set(alpDiseases.DRUNKENNESS,new alpFever(alp_Player,alpDiseases.DRUNKENNESS,"#me_drunkenness_desc",true,false,"set:dayz_gui image:iconBacteria"));
-		
 		alp_MedicList.Set(alpDiseases.BROKEN_ARMS,new alpBrokenArms(alp_Player,alpDiseases.BROKEN_ARMS,"#me_brokenarms_desc",true,true,"set:dayz_gui image:iconBone"));
 		alp_MedicList.Set(alpDiseases.BROKEN_LEGS,new alpBrokenLegs(alp_Player,alpDiseases.BROKEN_LEGS,"#me_brokenlegs_desc",true,true,"set:dayz_gui image:iconBone"));
-		
 		alp_MedicList.Set(alpDiseases.RADIATION,new alpRadiationDisease(alp_Player,alpDiseases.RADIATION,"#me_radiationdisease_desc",true,true,"set:nd_dayz_gui image:radiation"));
 		
-		
-		alp_MedicList.Set(alpDiseases.POISONING_CHEMICAL_1,new alpPoisoningChemica1_1(alp_Player,alpDiseases.POISONING_CHEMICAL_1,"#me_poisoningchemical_desc",true,true,"set:dayz_gui image:iconSkull"));
-		alp_MedicList.Set(alpDiseases.POISONING_CHEMICAL_2,new alpPoisoningChemica1_2(alp_Player,alpDiseases.POISONING_CHEMICAL_2,"#me_poisoningchemical_desc",true,true,"set:dayz_gui image:iconSkull"));
-		alp_MedicList.Set(alpDiseases.POISONING_CHEMICAL_3,new alpPoisoningChemica1_3(alp_Player,alpDiseases.POISONING_CHEMICAL_3,"#me_poisoningchemical_desc",true,true,"set:dayz_gui image:iconSkull"));
+		// 1. Correção: Nomes das classes de envenenamento químico alinhados com a nossa auditoria
+		alp_MedicList.Set(alpDiseases.POISONING_CHEMICAL_1,new alpPoisoningChemical1(alp_Player,alpDiseases.POISONING_CHEMICAL_1,"#me_poisoningchemical_desc",true,true,"set:dayz_gui image:iconSkull"));
+		alp_MedicList.Set(alpDiseases.POISONING_CHEMICAL_2,new alpPoisoningChemical2(alp_Player,alpDiseases.POISONING_CHEMICAL_2,"#me_poisoningchemical_desc",true,true,"set:dayz_gui image:iconSkull"));
+		alp_MedicList.Set(alpDiseases.POISONING_CHEMICAL_3,new alpPoisoningChemical3(alp_Player,alpDiseases.POISONING_CHEMICAL_3,"#me_poisoningchemical_desc",true,true,"set:dayz_gui image:iconSkull"));
 		
 #ifdef NAMALSK_SURVIVAL			
 		alp_MedicList.Set(alpDiseases.FROSTBITE,new alpFrostbite(alp_Player,alpDiseases.FROSTBITE,"#me_frostbite_desc",true,true,"set:nam_gui_icons image:coldresistfull2"));		
@@ -110,152 +105,126 @@ modded class alpRP
 	
 	override void ImproveToxicNaturalResistance(float exp)
 	{
+		if (!GetND() || !GetND().GetRP() || !GetND().GetRP().GetPerksOptions()) return;
+		if (!alp_Player) return;
+
 		if ( !GetND().GetRP().GetPerksOptions().EnablePerkToxicResistance )
 			return;
 				
-		
 		int currentLevel 		=  alp_Player.GetStatPerkToxicResistance().Get();
-		int 	maxLevel		= GetND().GetRP().GetPerkToxicResistanceLevelCup();		
+		int maxLevel		= GetND().GetRP().GetPerkToxicResistanceLevelCup();		
 		
 		if ( currentLevel < maxLevel )
 		{
-			
 			float addProgress 	= alp_Player.GetStatPerkToxicResistanceProgress().Get() + exp;
-			
 			float nextLevel   	= GetToxicResistanceRequiredExp( alp_Player.GetStatPerkToxicResistance().Get() + 1 );							
-			
 							
 			if ( addProgress >= nextLevel)
 			{
-				//get a new level
 				addProgress -= nextLevel;
 				currentLevel ++;	
-				//message	
 				GetND().GetNotf().SendMessage( alp_Player, ALPMSTYPE.SMLEVELUP, "#ip_you_have_gained_natural_toxic_resistance" );	
-									
 			}
-			//synchronization				
 			alp_Player.GetStatPerkToxicResistanceProgress().Set( addProgress );		
 			alp_Player.GetStatPerkToxicResistance().Set( currentLevel );		
-			
 		}		
 	}
 		
 	override void ImproveRadiationNaturalResistance(float exp)
 	{
+		if (!GetND() || !GetND().GetRP() || !GetND().GetRP().GetPerksOptions()) return;
+		if (!alp_Player) return;
+
 		if ( !GetND().GetRP().GetPerksOptions().EnablePerkRadiationResistance )
 			return;
 		
-		
 		int currentLevel 		=  alp_Player.GetStatPerkRadiationResistance().Get();
-		int 	maxLevel		= GetND().GetRP().GetPerkRadiationResistanceLevelCup();
-		
+		int maxLevel		= GetND().GetRP().GetPerkRadiationResistanceLevelCup();
 		
 		if ( currentLevel < maxLevel )
 		{
 			float addProgress 	= alp_Player.GetStatPerkRadiationResistanceProgress().Get() + exp;
 			float nextLevel   	= GetRadiationResistanceRequiredExp( alp_Player.GetStatPerkRadiationResistance().Get() + 1 );							
-					
 									
 			if ( addProgress >= nextLevel)
 			{
-				//get a new level
 				addProgress -= nextLevel;
 				currentLevel ++;	
-				//message	
 				GetND().GetNotf().SendMessage( alp_Player, ALPMSTYPE.SMLEVELUP, "#ip_you_have_gained_natural_radiation_resistance" );			
-											
 			}
-			//synchronization				
 			alp_Player.GetStatPerkRadiationResistanceProgress().Set( addProgress );		
 			alp_Player.GetStatPerkRadiationResistance().Set( currentLevel );		
-					
 		}		
 	}	
 		
-	
 	void ChangeHunting( float inc )
 	{
+		if (!GetND() || !GetND().GetRP() || !GetND().GetRP().GetPerksOptions()) return;
+		if (!alp_Player) return;
+
 		if ( GetND().GetRP().GetPerksOptions().EnablePerkHunting )
 		{		
-		
-			int 	currentLevel 	= alp_Player.GetStatPerkHunting().Get();				
-
-
-			int 	maxLevel		= GetND().GetRP().GetPerkHuntingLevelCup();
-			
-			
-			//skills
+			int currentLevel 	= alp_Player.GetStatPerkHunting().Get();				
+			int maxLevel		= GetND().GetRP().GetPerkHuntingLevelCup();
 			
 			if ( currentLevel < maxLevel )
 			{
 				float exp 			= alp_Player.GetStatPerkHuntingProgress().Get() + inc;
 				float nextLevel   	= GetHuntingRequiredExp( currentLevel + 1 );							
-					
 									
 				if ( exp >= nextLevel)
 				{
-					//get a new level
 					exp -= nextLevel;
 					currentLevel ++;	
-					//message	
 					GetND().GetNotf().SendMessage( alp_Player, ALPMSTYPE.SMLEVELUP, "#ip_you_have_improved_your_hunting_skill" );	
-											
 				}
 			
 				alp_Player.GetStatPerkHuntingProgress().Set( exp );		
 				alp_Player.GetStatPerkHunting().Set( currentLevel );		
-					
 			}	
 		}			
 	}
 		
-	
 	override void ChangeReputation( float inc )
 	{
-		
+		if (!GetND() || !GetND().GetRP() || !GetND().GetRP().GetPerksOptions()) return;
+		if (!alp_Player) return;
+
 		if ( GetND().GetRP().GetPerksOptions().EnablePerkReputation )
 		{
-			alp_Player.GetStatCurrentScore().Add( inc );//current session
+			alp_Player.GetStatCurrentScore().Add( inc );
 			
 			if ( GetND().GetRP().GetPerksOptions().EnableGainedReputationNotification )
 			{
 				int gainedExp = (float) inc;
-				
 				GetND().GetRP().SendRPC_GainedExp( GetPlayer(), gainedExp );
 			}
 
-			
-			int 	level 			= alp_Player.GetStatPerkReputation().Get();				
-			int		currentLevel	= level;
-			float 	exp 			= alp_Player.GetStatPerkReputationProgress().Get();	
-			int 	maxLevel		= GetND().GetRP().GetPerkReputationLevelCup();
+			int level 			= alp_Player.GetStatPerkReputation().Get();				
+			int currentLevel	= level;
+			float exp 			= alp_Player.GetStatPerkReputationProgress().Get();	
+			int maxLevel		= GetND().GetRP().GetPerkReputationLevelCup();
 			
 			exp += inc;
-			
 			VerifyReputationLevel( exp, level, maxLevel);
 			
 			if ( Math.AbsInt(level) < Math.AbsInt(currentLevel) )
 			{
-				//degrade
 				GetND().GetNotf().SendMessage( alp_Player, ALPMSTYPE.SMLEVELDOWN, "#ip_you_have_been_promoted_to" + " " +  "#ip_rank" + Math.AbsInt( level ));
 			}
 			if ( Math.AbsInt(level) > Math.AbsInt(currentLevel) )
 			{
-				//promote
 				GetND().GetNotf().SendMessage( alp_Player, ALPMSTYPE.SMLEVELUP, "#ip_you_have_been_promoted_to" + " " + "#ip_rank" + Math.AbsInt( level ));
 			}		
 			
-			//saving stats
 			alp_Player.GetStatPerkReputation().Set(level);				
 			alp_Player.GetStatPerkReputationProgress().Set( exp );		
 		}
 	}		
 	
-	
 	private void VerifyReputationLevel(out float exp, out int level, int maxLevel)
 	{
-		float 	reqExp,min,max,check,currentExp;
+		float reqExp, min, max, check, currentExp;
 		
 		if ( Math.AbsInt(level) == maxLevel )
 			reqExp = int.MAX - 1;
@@ -280,46 +249,37 @@ modded class alpRP
 		
 		check = Math.Clamp( exp, min, max );
 		
-		if ( exp > check )//promote
+		if ( exp > check )
 		{
-			if ( check == 0 ) //degrade bandit
+			if ( check == 0 )
 			{
-				currentExp =  GetReputationRequiredExp( Math.AbsInt(level)  ); 		
-				
+				currentExp = GetReputationRequiredExp( Math.AbsInt(level)  ); 		
 				exp -= currentExp;
 			}
 			else
 			{
 				exp -= check;
 			}
-			
 			level += 1;
-
 			VerifyReputationLevel( exp, level, maxLevel);
 			return;
 		}
-		if ( exp < check )//degrade
+		if ( exp < check )
 		{
-			if ( check == 0 ) //degrade hero
+			if ( check == 0 )
 			{
-				currentExp =  GetReputationRequiredExp( Math.AbsInt(level)  ); 		
-				
+				currentExp = GetReputationRequiredExp( Math.AbsInt(level)  ); 		
 				exp += currentExp;
 			}
 			else
 			{
 				exp -= check;
 			}
-				
 			level -= 1;
-
 			VerifyReputationLevel( exp, level, maxLevel);
 			return;
 		}		
-		
 	}	
-	
-	
 	
 	int GetStaminaLevelByEXP(out float exp)
 	{
@@ -328,7 +288,6 @@ modded class alpRP
 		for (level = 0; level < levelCap; )
 		{
 			float levelExp = GetStaminaRequiredExp(level + 1);
-			
 			if (exp >= levelExp)
 			{
 				level++;
@@ -343,20 +302,19 @@ modded class alpRP
 	float GetStaminaRequiredExp(int id)
 	{
 		int levelCup = GetND().GetRP().GetPerkStaminaLevelCup();
-		if (id >   levelCup ) 
+		if (id > levelCup) 
 		{
-			
-			return 	GetND().GetRP().GetPerkStamina().RequiredExp.Get( levelCup );
+			return GetND().GetRP().GetPerkStamina().RequiredExp.Get( levelCup );
 		}
 		else
 		{
 			return GetND().GetRP().GetPerkStamina().RequiredExp.Get(id);
 		}
-			
 	}		
 	
 	float GetTotalStaminaExp()
 	{
+		if (!alp_Player) return 0;
 		float exp;
 		for (int i = 0; i <= alp_Player.GetStatPerkStamina().Get(); i++)
 		{
@@ -366,13 +324,13 @@ modded class alpRP
 		return exp;	
 	}
 	
-	
-	
 	//reputation
 	float GetTotalReputationExp()
 	{
+		if (!alp_Player) return 0;
 		float exp;
-		int role 
+		// 2. Correção de Sintaxe (Ponto e vírgula adicionado para não quebrar a compilação)
+		int role; 
 		int level = alp_Player.GetStatPerkReputation().Get();
 		
 		if (level < 0)
@@ -392,17 +350,16 @@ modded class alpRP
 	float GetReputationRequiredExp(int id)
 	{
 		int levelCup = GetND().GetRP().GetPerkReputationLevelCup();
-		if (id >   levelCup ) 
+		if (id > levelCup) 
 		{
-			
-			return 	GetND().GetRP().GetPerkReputation().RequiredExp.Get( levelCup );
+			return GetND().GetRP().GetPerkReputation().RequiredExp.Get( levelCup );
 		}
 		else
 		{
 			return GetND().GetRP().GetPerkReputation().RequiredExp.Get(id);
 		}
-			
 	}	
+
 	int GetReputationLevelByEXP(out float exp)
 	{
 		int level;
@@ -410,7 +367,6 @@ modded class alpRP
 		for (level = 0; level < levelCap; )
 		{
 			float levelExp = GetReputationRequiredExp(level + 1);
-			
 			if (exp >= levelExp)
 			{
 				level++;
@@ -429,7 +385,6 @@ modded class alpRP
 		for (level = 0; level < levelCap; )
 		{
 			float levelExp = GetHuntingRequiredExp(level + 1);
-			
 			if (exp >= levelExp)
 			{
 				level++;
@@ -440,23 +395,23 @@ modded class alpRP
 		}					
 		return level;	
 	}		
+
 	float GetHuntingRequiredExp(int id)
 	{
 		int levelCup = GetND().GetRP().GetPerkHuntingLevelCup();
-		if (id >   levelCup ) 
+		if (id > levelCup) 
 		{
-			
-			return 	GetND().GetRP().GetPerkHunting().RequiredExp.Get( levelCup );
+			return GetND().GetRP().GetPerkHunting().RequiredExp.Get( levelCup );
 		}
 		else
 		{
 			return GetND().GetRP().GetPerkHunting().RequiredExp.Get(id);
 		}
-			
 	}		
 	
 	float GetTotalHuntingExp()
 	{
+		if (!alp_Player) return 0;
 		float exp;
 		for (int i = 0; i <= alp_Player.GetStatPerkHunting().Get(); i++)
 		{
@@ -466,24 +421,22 @@ modded class alpRP
 		return exp;	
 	}
 	
-	
 	float GetRadiationResistanceRequiredExp(int id)
 	{
 		int levelCup = GetND().GetRP().GetPerkRadiationResistanceLevelCup();
-		if (id >   levelCup ) 
+		if (id > levelCup) 
 		{
-			
-			return 	GetND().GetRP().GetPerkRadiationResistance().RequiredExp.Get( levelCup );
+			return GetND().GetRP().GetPerkRadiationResistance().RequiredExp.Get( levelCup );
 		}
 		else
 		{
 			return GetND().GetRP().GetPerkRadiationResistance().RequiredExp.Get(id);
 		}
-			
 	}		
 	
 	float GetTotalRadiationResistanceExp()
 	{
+		if (!alp_Player) return 0;
 		float exp;
 		for (int i = 0; i <= alp_Player.GetStatPerkRadiationResistance().Get(); i++)
 		{
@@ -492,6 +445,7 @@ modded class alpRP
 		exp += alp_Player.GetStatPerkRadiationResistanceProgress().Get();
 		return exp;	
 	}	
+
 	int GetRadiationResistanceLevelByEXP(out float exp)
 	{
 		int level;
@@ -499,7 +453,6 @@ modded class alpRP
 		for (level = 0; level < levelCap; )
 		{
 			float levelExp = GetRadiationResistanceRequiredExp(level + 1);
-			
 			if (exp >= levelExp)
 			{
 				level++;
@@ -511,24 +464,22 @@ modded class alpRP
 		return level;	
 	}	
 	
-	
 	float GetToxicResistanceRequiredExp(int id)
 	{
 		int levelCup = GetND().GetRP().GetPerkToxicResistanceLevelCup();
-		if (id >   levelCup ) 
+		if (id > levelCup) 
 		{
-			
-			return 	GetND().GetRP().GetPerkToxicResistance().RequiredExp.Get( levelCup );
+			return GetND().GetRP().GetPerkToxicResistance().RequiredExp.Get( levelCup );
 		}
 		else
 		{
 			return GetND().GetRP().GetPerkToxicResistance().RequiredExp.Get(id);
 		}
-			
 	}		
 	
 	float GetTotalToxicResistanceExp()
 	{
+		if (!alp_Player) return 0;
 		float exp;
 		for (int i = 0; i <= alp_Player.GetStatPerkToxicResistance().Get(); i++)
 		{
@@ -537,6 +488,7 @@ modded class alpRP
 		exp += alp_Player.GetStatPerkToxicResistanceProgress().Get();
 		return exp;	
 	}	
+
 	int GetToxicResistanceLevelByEXP(out float exp)
 	{
 		int level;
@@ -544,7 +496,6 @@ modded class alpRP
 		for (level = 0; level < levelCap; )
 		{
 			float levelExp = GetToxicResistanceRequiredExp(level + 1);
-			
 			if (exp >= levelExp)
 			{
 				level++;
@@ -555,30 +506,39 @@ modded class alpRP
 		}					
 		return level;	
 	}			
+
 	bool IsHero()
 	{	
-		return !alp_Player.GetSyncData().GetElement( alpRPelements.REPUTATION_ROLE ).GetValue();	
+		// 3. Blindagem Vital do SyncData (Evita crash quando outro script consulta a Role)
+		if (!alp_Player || !alp_Player.GetSyncData()) return true; 
+
+		auto syncElem = alp_Player.GetSyncData().GetElement( alpRPelements.REPUTATION_ROLE );
+		if (!syncElem) return true;
+
+		return !syncElem.GetValue();	
 	}	
-	
-	
 	
 	void SetDisease(int value)
 	{
 		alp_Diseases = alp_Diseases | value;
 	}
+
 	void UnsetDisease(int value)
 	{
-		
 		alp_Diseases = alp_Diseases & (~value);
 	}
-	
 	
 	int GetDiseases()
 	{
 		if (GetGame().IsClient())
 		{
+			// 4. Proteção Extrema da Interface (Evita Crash se o SyncData atrasar na conexão)
+			if (!GetPlayer() || !GetPlayer().GetSyncData()) return 0;
 			
-			return GetPlayer().GetSyncData().GetElement(alpRPelements.DISEASES).GetValue();
+			auto syncElem = GetPlayer().GetSyncData().GetElement(alpRPelements.DISEASES);
+			if (!syncElem) return 0;
+			
+			return syncElem.GetValue();
 		}
 		else
 		{
@@ -591,9 +551,11 @@ modded class alpRP
 		return GetDiseases() & disease;
 	}		
 		
-	
 	bool HasAnyContaminedItems()	
 	{
+		// 5. Failsafe Global de Configurações
+		if (!GetND() || !GetND().GetMS() || !GetND().GetMS().GetOptionsRadiation()) return false;
+		if (!alp_Player || !alp_Player.GetInventory()) return false;
 			
 		if ( GetND().GetMS().GetOptionsRadiation().RadiationLimitToContamineItems )
 		{	
@@ -616,7 +578,6 @@ modded class alpRP
 		{
 			return false;
 		}
-
 	}
 	
 	string alp_MedicalFeeCurrency;
@@ -628,25 +589,25 @@ modded class alpRP
 	
 	int GetMedicalFee(int traderID , out int currencyID )
 	{
+		// 6. Proteção Combinada para os cálculos de taxa do médico
+		if (!GetPlayer() || !GetPlayer().GetSyncData()) return 0;
+		if (!GetND() || !GetND().GetRP() || !GetND().GetRP().GetInteractions()) return 0;
 
+		alpNPCtraderStock trader = alpTraderCoreBase.alp_TraderStockMapped.Get( traderID );
 		alpMedicalFees fees;
-		alpNPCtraderStock trader = alpTraderCoreBase.alp_TraderStockMapped.Get(	traderID );
+		float currencyRate, coef;
 		
-		float currencyRate,coef;
-		
-		//PlayerBase player = PlayerBase.Cast( GetGame().GetPlayer() );
-		
-		int level = GetPlayer().GetSyncData().GetElement( alpRPelements.REPUTATION ).GetValue();
-		float sale = 	GetND().GetRP().GetReputationMdf( level );		
+		auto repElem = GetPlayer().GetSyncData().GetElement( alpRPelements.REPUTATION );
+		int level = 0;
+		if (repElem) level = repElem.GetValue(); // Extração segura do level
+
+		float sale = GetND().GetRP().GetReputationMdf( level );		
 		
 		if ( trader )
 		{
 			currencyID = trader.CurrencyID;
-			
 			alp_MedicalFeeCurrency = alpTraderCoreBase.GetCurrencyName( trader.CurrencyID );	 
-			
 			currencyRate = alpBANK.GetCurrencyRate( trader.CurrencyID );	
-			
 			
 			if ( IsHero() )
 			{
@@ -667,5 +628,3 @@ modded class alpRP
 		return 0;		
 	}
 }
-
-

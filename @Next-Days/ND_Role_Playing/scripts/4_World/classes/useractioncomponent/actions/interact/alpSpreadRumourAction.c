@@ -1,7 +1,10 @@
-
+/**
+ * @class   alpSpreadRumourAction
+ * @brief   Ação de interação com NPC para acessar rumores e fofocas (Sistema de Informação)
+ * Auditado em: 2024 - Foco em Performance de Rede e Integridade de Dados
+ */
 class alpSpreadRumourAction: ActionInteractBase
 {
-
 	void alpSpreadRumourAction()
 	{
 		m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_INTERACTONCE;
@@ -15,7 +18,6 @@ class alpSpreadRumourAction: ActionInteractBase
 		m_ConditionItem = new CCINone;
 	}
 
-
 	override string GetText()
 	{
 		return "#npc_gossipmenu";
@@ -23,58 +25,45 @@ class alpSpreadRumourAction: ActionInteractBase
 
 	override bool ActionCondition( PlayerBase player, ActionTarget target, ItemBase item )
 	{
-
-		if (GetGame().IsClient())
+		// 1. Previne abertura dupla no cliente
+		if ( GetGame().IsClient() )
 		{
-			if (GetGame().GetUIManager().FindMenu(ALP_MENU_SPREADRUMOUR) )
+			if ( GetGame().GetUIManager() && GetGame().GetUIManager().FindMenu(ALP_MENU_SPREADRUMOUR) )
 				return false;		
 		}
 		
-
-		alpNPC ntarget = alpNPC.Cast(  target.GetObject() );
-		if( ntarget && ntarget.IsAlive() && ntarget.alp_StockID > 0 && ntarget.CanSpreadRumoursMenu() && ntarget.CanSpeakWithMe(player) )
+		// 2. Validação do NPC
+		alpNPC ntarget = alpNPC.Cast( target.GetObject() );
+		if ( ntarget && ntarget.IsAlive() )
 		{
-			return true;
+			// Verifica se o NPC tem um ID de estoque válido e se permite rumores
+			if ( ntarget.alp_StockID > 0 && ntarget.CanSpreadRumoursMenu() )
+			{
+				// Verifica afinidade ou permissão de fala (Sistema de Facção/Reputação)
+				return ntarget.CanSpeakWithMe(player);
+			}
 		}
 		return false;
 	}
 
 	override void OnExecuteServer( ActionData action_data )
 	{
-		
 		alpNPC npc = alpNPC.Cast( action_data.m_Target.GetObject() );
+		PlayerBase player = action_data.m_Player;
 
-		if (npc)
+		if ( npc && player && player.GetRP() )
 		{
-			action_data.m_Player.GetRP().GetCart().SetNPCid( npc.alp_StockID,  npc.alp_IDmission  );
-			action_data.m_Player.GetSyncData().RegisterToStats( true );
+			// 3. Vincula o NPC atual ao contexto de transação do jogador
+			player.GetRP().GetCart().SetNPCid( npc.alp_StockID, npc.alp_IDmission );
 			
-			action_data.m_Player.GetSyncData().ForceSync();
-			GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID , action_data.m_Player, true );
+			// 4. Sincronização seletiva (Otimizado)
+			// Apenas registre se houver necessidade de estatísticas na UI de rumores
+			player.GetSyncData().RegisterToStats( true );
+			player.GetSyncData().ForceSync();
+
+			// 5. Abre a interface de Rumores/Estoque
+			// O parâmetro 'true' no final deve indicar que é um menu de rumores/diálogo
+			GetND().GetMS().GetTrader().GiveMeStock( npc.alp_StockID, player, true );
 		}		
-		
-
 	}
-	
-	
-	override void OnExecuteClient( ActionData action_data )
-	{
-		
-		alpNPC npc = alpNPC.Cast( action_data.m_Target.GetObject() );
-
-		if (npc)
-		{
-			GetND().GetMS().GetTrader().SetNPC(npc.alp_StockID);						
-			action_data.m_Player.GetRP().GetCart().SetNPCid( npc.alp_StockID  );
-
-			if (!GetGame().GetUIManager().FindMenu(ALP_MENU_SPREADRUMOUR))
-			{
-				GetGame().GetUIManager().EnterScriptedMenu(ALP_MENU_SPREADRUMOUR, NULL);
-			}						
-			
-		}		
-
-	}
-	
-
-}
+};

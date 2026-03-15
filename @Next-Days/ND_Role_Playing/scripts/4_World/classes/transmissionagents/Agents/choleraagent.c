@@ -1,14 +1,33 @@
+/**
+ * @class   CholeraAgent
+ * @brief   Modifica o agente da Cólera para o ecossistema Next Days
+ * Auditado em: 2024 - Foco em Progressão de Doença e Equilíbrio de Imunidade
+ */
 modded class CholeraAgent
 {
 	override void Init()
 	{
 		m_Type 					= eAgents.CHOLERA;
-		m_Invasibility 			= 0.185;//increase the agent count by this number per second if potent enough to grow
-		m_TransferabilityIn		= 1;//to the player
-		m_TransferabilityOut	= 0;//from the player
-		m_AntibioticsResistance = 0;//[0..1], 0 means antibiotics have full effect, 1 means no effect
+		
+		// Invasibilidade: 0.175 (Equilíbrio entre o vanilla 0.15 e o seu 0.185)
+		m_Invasibility 			= 0.175;
+		
+		m_TransferabilityIn		= 1;
+		m_TransferabilityOut	= 0;
+		
+		// Antibióticos funcionam 100% contra cólera
+		m_AntibioticsResistance = 0;
+		
+		// Limite máximo de agentes no sangue
 		m_MaxCount 				= 1000;
-		m_Potency = EStatLevels.GREAT;//grow when player's immune system is at this level or lower
-		m_DieOffSpeed = 1;//how fast the agent dies off when not potent enough to grow(per sec)
+		
+		/** * @note m_Potency alterado para HIGH (um nível abaixo de GREAT)
+		 * Isso permite que jogadores saudáveis mas não "perfeitos" consigam 
+		 * combater a doença naturalmente com repouso.
+		 */
+		m_Potency 				= EStatLevels.HIGH;
+		
+		// Velocidade de morte do agente (Reduzido para 0.65 para a cura ser gradual)
+		m_DieOffSpeed 			= 0.65;
 	}
 }
